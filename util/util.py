@@ -14,7 +14,7 @@ from .terminal_colors import tcols
 def make_output_directories(locations: list, outdir: str):
     """Create an output directory in a list of locations."""
     if isinstance(locations, str):
-        return make_output_directory(location, outdir)
+        return make_output_directory(locations, outdir)
 
     return [make_output_directory(location, outdir) for location in locations]
 
