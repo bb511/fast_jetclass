@@ -1,5 +1,5 @@
-# Optuna DeepSets Trial Class for hyperparameter optimisation.
-# See the deepsets.py file for detailed information about the architecture.
+# Optuna MLP Trial Class for hyperparameter optimisation.
+# See the mlp.py file for detailed information about the architecture.
 
 import os
 import numpy as np
@@ -25,7 +25,7 @@ from . import util as dsutil
 
 def main(args):
     util.util.device_info()
-    outdir = util.util.make_output_directory("trained_deepsets", args["outdir"])
+    outdir = util.util.make_output_directory("trained_mlps", args["outdir"])
 
     data = util.data.Data.load_kfolds(**args["data_hyperparams"])
 
@@ -72,22 +72,45 @@ class Objective:
                 ),
             }
         )
+
+        nlayers = trial.suggest_categorical(
+            'nlayers', self.args['model_hyperparams']['nlayers']
+            )
+
+
+        layers = []
+        if self.jet_data.ncons == 8:
+            layers.append(125)
+            layers.append(60)
+        if self.jet_data.ncons == 16:
+            layers.append(62)
+        if self.jet_data.ncons == 32:
+            layers.append(30)
+
+        for layer in range(nlayers - len(layers)):
+            layers.append(trial.suggest_categorical(
+                f'layer{layer}_nodes', self.args['model_hyperparams']['nnodes']
+                ))
+
         self.model_hyperparams.update(
             {
-                "nnodes_phi": trial.suggest_categorical(
-                    "nphi", self.args["model_hyperparams"]["nnodes_phi"]
-                ),
-                "nnodes_rho": trial.suggest_categorical(
-                    "nrho", self.args["model_hyperparams"]["nnodes_rho"]
-                ),
+                "layers": layers,
+                "l1_coeff": trial.suggest_float(
+                    "l1_coeff", *self.args["model_hyperparams"]["l1_coeff"], log=True
+                    ),
+                # "dropout_rate": trial.suggest_float(
+                    # "dropout_rate", *self.args["model_hyperparams"]["dropout_rate"]
+                    # ),
                 "activ": trial.suggest_categorical(
                     "activ", self.args["model_hyperparams"]["activ"]
                 ),
+                "nbits": -1,
             }
         )
 
-        model = dsutil.choose_deepsets(
-            self.args["deepsets_type"],
+        model = dsutil.choose_mlp(
+            self.args["mlp_type"],
+            self.jet_data.ntrain_jets,
             self.jet_data.ncons,
             self.jet_data.nfeat,
             self.model_hyperparams,
@@ -110,7 +133,7 @@ class Objective:
             batch_size=self.training_hyperparams["batch"],
             verbose=2,
             callbacks=callbacks,
-            validation_data=(data.test_data, data.test_target),
+            validation_data=(self.jet_data.test_data, self.jet_data.test_target),
             shuffle=True,
         )
 
@@ -125,7 +148,7 @@ class Objective:
 def get_tensorflow_callbacks():
     """Prepare the callbacks for the training."""
     early_stopping = keras.callbacks.EarlyStopping(
-        monitor="val_categorical_accuracy", patience=20
+        monitor="val_categorical_accuracy", patience=15
     )
     learning = keras.callbacks.ReduceLROnPlateau(
         monitor="val_categorical_accuracy", factor=0.8, patience=10, min_lr=0.00001

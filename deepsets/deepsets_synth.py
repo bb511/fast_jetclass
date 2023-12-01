@@ -46,7 +46,7 @@ def deepsets_invariant_synth(
     # Invariant operation
     # inv_operation_output = KL.GlobalMaxPooling1D()(phi_output)
     phi_output = qkeras.QActivation(
-        qkeras.quantized_bits(bits=12, integer=3, symmetric=0, keep_negative=1)
+        qkeras.quantized_bits(bits=20, integer=10, symmetric=0, keep_negative=1)
     )(phi_output)
     inv_operation_output = KL.GlobalAveragePooling1D()(phi_output)
 

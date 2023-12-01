@@ -1,22 +1,18 @@
 #!/usr/bin/env python
 
-# Run the training of the deepsets network given the hyperparameters listed below.
+# Run the training of the interaction network..
 import argparse
 import os
 import sys
 sys.path.append("..")
 
-from deepsets.train import main
+from mlp.hyperparam_optimisation import main
 parser = argparse.ArgumentParser(formatter_class=argparse.
                                  ArgumentDefaultsHelpFormatter)
-parser.add_argument("--gpu", type=str, default="",
-                    help="Sets the number of the GPU to run on.")
 parser.add_argument("--test_kfold", type=int, default=-1,
                     help="Which kfold to use for test.")
-parser.add_argument("--nbits", type=int, default=-1,
-                    help="The number of bits for quantisation of the model.")
-parser.add_argument("--outdir", type=str, default="test",
-                    help="The output directory name.")
+parser.add_argument("--gpu", type=str, default="",
+                    help="Sets the number of the GPU to run on.")
 args = parser.parse_args()
 
 if args.gpu:
@@ -39,32 +35,35 @@ data_hyperparams = {
 }
 
 training_hyperparams = {
-    "epochs":       300,
-    "batch":        128,
-    "lr":           0.0032,
-    "pruning_rate": 0.5
+    "batch":        [64, 128, 256, 512, 1024],
+    "epochs":       150,
+    "lr":           [0.0001, 0.01],
 }
 
 compilation_hyperparams = {
-    "optimizer": "adam",
-    "loss":      "categorical_crossentropy",
-    "metrics":   ["categorical_accuracy"],
+    "optimizer": ['adam'],
+    "loss":      'softmax_with_crossentropy',
+    "metrics":   ['categorical_accuracy'],
 }
 
 model_hyperparams = {
-    "nnodes_phi": 32,
-    "nnodes_rho": 32,
-    "activ": 'relu',
-    "nbits": args.nbits,
+    "nlayers": [5, 6, 7, 8, 9, 10, 11],
+    "nnodes": [32, 44, 64, 84],
+    "l1_coeff": [0.00001, 0.001],
+    # "dropout_rate": [0, 1],
+    "activ": ['relu', 'tanh'],
 }
 
 args = {
+    "study_name":           f'{nconst}const_ptetaphi_constrainedl1',
+    # "study_name":           f'test',
+    "storage":              'mlp_reg',
+    "outdir":               'mlp_hyperopt',
+    "mlp_type":             'mlp_reg',
     "data_hyperparams":     data_hyperparams,
     "training_hyperparams": training_hyperparams,
     "model_hyperparams":    model_hyperparams,
     "compilation":          compilation_hyperparams,
-    "outdir":               args.outdir,
-    "deepsets_type":        "sinvariant",
 }
 
 main(args)

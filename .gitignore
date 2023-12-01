@@ -1,5 +1,6 @@
 # CUSTOM IGNORES
 trained_deepsets/
+trained_mlps/
 synthed_deepsets/
 logs/
 *.logs
