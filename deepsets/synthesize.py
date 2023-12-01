@@ -27,7 +27,7 @@ def main(args):
     model_dir = args['model_dir']
     plots_dir = util.util.make_output_directories(args['model_dir'], f"plots_{seed}")
     synthesis_dir = util.util.make_output_directories(
-        args['model_dir'], 'synthesis_final'
+        args['model_dir'], 'synthesis_softmax_faster'
     )
 
     print(tcols.OKGREEN + "\nIMPORTING DATA AND MODEL\n" + tcols.ENDC)
@@ -61,8 +61,8 @@ def main(args):
 
     print(tcols.OKGREEN + "\nRUNNING MODEL DIAGNOSTICS\n" + tcols.ENDC)
     hls_model.compile()
-    run_trace(model, hls_model, data.test_data[:1000], sample_number=0)
-    profile_model(model, hls_model, data.test_data, synthesis_dir)
+    # run_trace(model, hls_model, data.test_data[:1000], sample_number=0)
+    # profile_model(model, hls_model, data.test_data, synthesis_dir)
     hls_model.write()
 
     print(tcols.OKGREEN + "\nTESTING MODEL PERFORMANCE\n" + tcols.ENDC)
@@ -93,7 +93,10 @@ def config_hls4ml(config: dict):
     config['LayerName']['phi3']['Strategy'] = "Latency"
     config["LayerName"]['phi3']["ConvImplementation"] = "Pointwise"
 
+    # config["LayerName"]['global_average_pooling1d']["Precision"] = \
+        # "ap_fixed<16,6,AP_RND,AP_SAT>"
     config["LayerName"]['input_layer']["Precision"] = "ap_fixed<12,4,AP_RND,AP_SAT>"
+    config['LayerName']['softmax']['Implementation'] = 'latency'
     util.util.nice_print_dictionary('HLS Configuration', config)
 
     return config
@@ -163,7 +166,7 @@ def shuffle_constituents(data: np.ndarray, const_seed: int) -> np.ndarray:
 
 def run_inference(model: keras.Model, data: util.data.Data, plots_dir: list):
     """Computes predictions of a model and saves them to numpy files."""
-    y_pred = tf.nn.softmax(model.predict(data.test_data)).numpy()
+    y_pred = model.predict(data.test_data)
     y_pred.astype("float32").tofile(os.path.join(plots_dir, "y_pred.dat"))
 
     return y_pred
@@ -209,6 +212,8 @@ def get_model_activations(model: keras.Model):
     model_activations = []
     for layer in model.layers:
         if 'activation' in layer.name:
+            model_activations.append(layer.name)
+        elif 'softmax' in layer.name:
             model_activations.append(layer.name)
 
     return model_activations
