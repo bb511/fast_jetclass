@@ -6,7 +6,7 @@ import os
 import sys
 sys.path.append("..")
 
-from deepsets.train import main
+from mlp.train import main
 parser = argparse.ArgumentParser(formatter_class=argparse.
                                  ArgumentDefaultsHelpFormatter)
 parser.add_argument("--gpu", type=str, default="",
@@ -40,21 +40,22 @@ data_hyperparams = {
 
 training_hyperparams = {
     "epochs":       300,
-    "batch":        128,
-    "lr":           0.0032,
-    "pruning_rate": 0.5
+    "batch":        1024,
+    "lr":           0.0043,
+    "pruning_rate": 0
 }
 
 compilation_hyperparams = {
     "optimizer": "adam",
-    "loss":      "categorical_crossentropy",
+    "loss":      "softmax_with_crossentropy",
+    # "loss":      "cateogrical_crossentropy",
     "metrics":   ["categorical_accuracy"],
 }
 
 model_hyperparams = {
-    "nnodes_phi": 32,
-    "nnodes_rho": 32,
+    "layers": [30, 84, 32, 84, 64],
     "activ": 'relu',
+    "l1_coeff": 1.30e-05,
     "nbits": args.nbits,
 }
 
@@ -64,7 +65,7 @@ args = {
     "model_hyperparams":    model_hyperparams,
     "compilation":          compilation_hyperparams,
     "outdir":               args.outdir,
-    "deepsets_type":        "sinvariant",
+    "mlp_type":             "smlp_reg",
 }
 
 main(args)

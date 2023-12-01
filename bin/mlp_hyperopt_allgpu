@@ -1,0 +1,6 @@
+#!/usr/bin/env bash
+
+nohup python -u mlp_hyperopt --test_kfold 4 --gpu 0 > logs/mlpreg_hyperopt_32const_ptetaphi_constrainedl1_0.out &
+nohup python -u mlp_hyperopt --test_kfold 4 --gpu 1 > logs/mlpreg_hyperopt_32const_ptetaphi_constrainedl1_1.out &
+nohup python -u mlp_hyperopt --test_kfold 4 --gpu 2 > logs/mlpreg_hyperopt_32const_ptetaphi_constrainedl1_2.out &
+nohup python -u mlp_hyperopt --test_kfold 4 --gpu 3 > logs/mlpreg_hyperopt_32const_ptetaphi_constrainedl1_3.out &
