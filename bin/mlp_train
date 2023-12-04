@@ -47,8 +47,8 @@ training_hyperparams = {
 
 compilation_hyperparams = {
     "optimizer": "adam",
-    "loss":      "softmax_with_crossentropy",
-    # "loss":      "cateogrical_crossentropy",
+    # "loss":      "softmax_with_crossentropy",
+    "loss":      "categorical_crossentropy",
     "metrics":   ["categorical_accuracy"],
 }
 

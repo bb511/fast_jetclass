@@ -80,12 +80,12 @@ class Objective:
 
         layers = []
         if self.jet_data.ncons == 8:
-            layers.append(125)
+            layers.append(120)
             layers.append(60)
         if self.jet_data.ncons == 16:
-            layers.append(62)
+            layers.append(88)
         if self.jet_data.ncons == 32:
-            layers.append(30)
+            layers.append(84)
 
         for layer in range(nlayers - len(layers)):
             layers.append(trial.suggest_categorical(

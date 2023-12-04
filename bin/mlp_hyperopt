@@ -48,14 +48,14 @@ compilation_hyperparams = {
 
 model_hyperparams = {
     "nlayers": [5, 6, 7, 8, 9, 10, 11],
-    "nnodes": [32, 44, 64, 84],
+    "nnodes": [32, 44, 64, 88],
     "l1_coeff": [0.00001, 0.001],
     # "dropout_rate": [0, 1],
     "activ": ['relu', 'tanh'],
 }
 
 args = {
-    "study_name":           f'{nconst}const_ptetaphi_constrainedl1',
+    "study_name":           f'{nconst}const_ptetaphi_constrainedl1_fixed',
     # "study_name":           f'test',
     "storage":              'mlp_reg',
     "outdir":               'mlp_hyperopt',

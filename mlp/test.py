@@ -126,7 +126,8 @@ def get_kfolded_models(kfolds_folder: str):
 
 def run_inference(model: keras.Model, data: util.data.Data, plots_dir: list):
     """Computes predictions of a model and saves them to numpy files."""
-    y_pred = tf.nn.softmax(model.predict(data.test_data)).numpy()
+    # y_pred = tf.nn.softmax(model.predict(data.test_data)).numpy()
+    y_pred = model.predict(data.test_data)
     y_pred.astype("float32").tofile(os.path.join(plots_dir, "y_pred.dat"))
 
     return y_pred

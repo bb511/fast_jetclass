@@ -12,7 +12,7 @@ from tensorflow_model_optimization.sparsity import keras as sparsity
 from mlp.mlp import MLP
 from mlp.mlp import MLPRegular
 from mlp.mlp_quantised import MLPRegularQuantised
-from mlp.mlp_quantised import mlp_regularised_synth
+from mlp.mlp_synth import mlp_regularised_synth
 from util.terminal_colors import tcols
 
 
@@ -32,12 +32,14 @@ def choose_mlp(
 
 
     mlp_type, model_hyperparams = check_quantised_model(mlp_type, model_hyperparams)
-    model_hyperparams = check_synthesis_model(mlp_type, model_hyperparams)
+    model_hyperparams = check_synthesis_model(
+        mlp_type, model_hyperparams, nconst, nfeats
+    )
 
     switcher = {
         "mlp":      lambda: MLP(**model_hyperparams),
         "mlp_reg":  lambda: MLPRegular(**model_hyperparams),
-        "qmlp_reg": lambda: MLPRegularQuantised(**model_hyperparams)
+        "qmlp_reg": lambda: MLPRegularQuantised(**model_hyperparams),
         "qsmlp_reg": lambda: mlp_regularised_synth(**model_hyperparams),
     }
 
@@ -127,14 +129,16 @@ def check_quantised_model(model_type: str, model_hyperparams: dict):
     """Check if one should impose any quantisation on the model."""
     if 'nbits' in model_hyperparams:
         if model_hyperparams["nbits"] > 0:
-            model_type = "q" + mlp_type
+            model_type = "q" + model_type
         else:
             model_hyperparams.pop("nbits")
 
     return model_type, model_hyperparams
 
 
-def check_synthesis_model(model_type: str, model_hyperparams: dict):
+def check_synthesis_model(
+    model_type: str, model_hyperparams: dict, nconst: int, nfeats: int
+    ):
     """Check if the model is meant to be synthesized (uses different implementation)."""
     if model_type[0] == "s" or model_type[1] == "s":
         model_hyperparams.update({"input_shape": (nconst, nfeats)})

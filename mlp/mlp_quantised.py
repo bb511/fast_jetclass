@@ -18,7 +18,7 @@ class MLPRegularQuantised(keras.Model):
         kwargs: Regularisation parameters.
     """
 
-    def __init__(self, layers: list, activ: str = "relu", nbits: int,  **kwargs):
+    def __init__(self, layers: list, activ: str = "relu", nbits: int = 8,  **kwargs):
         super(MLPRegular, self).__init__(name="MLPRegularised")
         self.nclasses = 5
 
@@ -26,7 +26,7 @@ class MLPRegularQuantised(keras.Model):
         for layer_nodes in layers:
             if 'l1_coeff' in kwargs:
                 self.mlp.add(
-                    KL.QDense(
+                    qkeras.QDense(
                         layer_nodes,
                         kernel_regularizer=keras.regularizers.L1(kwargs['l1_coeff']),
                         bias_quantizer=nbit,
@@ -35,13 +35,13 @@ class MLPRegularQuantised(keras.Model):
                 )
             else:
                 self.mlp.add(
-                    KL.QDense(
+                    qkeras.QDense(
                         layer_nodes,
                         bias_quantizer=nbit,
                         kernel_quantizer=nbits,
                     )
                 )
-            self.mlp.add(KL.Activation(activ))
+            self.mlp.add(qkeras.QActivation(activ))
 
         self.mlp.add(KL.Dense(self.nclasses))
 

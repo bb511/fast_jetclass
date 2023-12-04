@@ -23,34 +23,37 @@ def mlp_regularised_synth(
     activ = format_qactivation(activ, nbits)
 
     mlp_input = keras.Input(shape=input_shape, name="input_layer")
-    mlp_layer = KL.QDense(
+    mlp_layer = KL.Flatten()(mlp_input)
+    mlp_layer = qkeras.QDense(
         layers[0],
         kernel_regularizer=keras.regularizers.L1(kwargs['l1_coeff']),
         bias_quantizer=nbits,
         kernel_quantizer=nbits,
     )(mlp_layer)
+    mlp_activ = qkeras.QActivation(activ)(mlp_layer)
 
-    for layer_nodes in layers.pop(0):
+    layers.pop(0)
+    for layer_nodes in layers:
         if 'l1_coeff' in kwargs:
-            mlp_layer = KL.QDense(
+            mlp_layer = qkeras.QDense(
                 layer_nodes,
                 kernel_regularizer=keras.regularizers.L1(kwargs['l1_coeff']),
                 bias_quantizer=nbits,
                 kernel_quantizer=nbits,
-            )(mlp_layer)
+            )(mlp_activ)
         else:
-            mlp_layer = KL.QDense(
+            mlp_layer = qkeras.QDense(
                 layer_nodes,
                 bias_quantizer=nbits,
                 kernel_quantizer=nbits,
-            )(mlp_layer)
-        mlp_activ = KL.Activation(activ)(mlp_layer)
+            )(mlp_activ)
+        mlp_activ = qkeras.QActivation(activ)(mlp_layer)
 
-    mlp_layer = KL.Dense(nclasses)
+    mlp_layer = KL.Dense(nclasses)(mlp_activ)
     mlp_output = KL.Softmax()(mlp_layer)
-    deepsets = keras.Model(mlp_input, deepsets_output, name="deepsets_invariant")
+    mlp = keras.Model(mlp_input, mlp_output, name="mlp")
 
-    return deepsets
+    return mlp
 
 
 def format_quantiser(nbits: int):
