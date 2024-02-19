@@ -116,6 +116,7 @@ def constituent_number(outdir: str, x_data: np.ndarray):
 
     constituents_distribution = count_constituents_per_jet(x_data)
     median_const = np.median(constituents_distribution)
+    average_const = np.average(constituents_distribution)
 
     plt.xlim(0, 150)
     plt.figure(figsize=(12, 10))
@@ -125,7 +126,7 @@ def constituent_number(outdir: str, x_data: np.ndarray):
         alpha=0.4,
         histtype="step",
         linewidth=2.5,
-        label=f"Median: {median_const}",
+        label=f"Median: {median_const}\n Average: {average_const:.3f}",
         color="#648FFF",
     )
     plt.xlabel("Number of Constituents")

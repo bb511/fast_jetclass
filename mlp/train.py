@@ -41,6 +41,7 @@ def main(args):
 def build_model(args: dict, data: util.data.Data):
     """Instantiate the model with chosen hyperparams and return it."""
     print(tcols.HEADER + "\n\nINSTANTIATING MODEL" + tcols.ENDC)
+
     model = dsutil.choose_mlp(
         args["mlp_type"],
         data.ntrain_jets,
@@ -51,6 +52,15 @@ def build_model(args: dict, data: util.data.Data):
         args["training_hyperparams"],
     )
     model.summary(expand_nested=True)
+    for layer in model.layers:
+        if hasattr(layer, "kernel_quantizer"):
+            print(
+                layer.name,
+                "kernel:", str(layer.kernel_quantizer_internal),
+                "bias:", str(layer.bias_quantizer_internal)
+            )
+        elif hasattr(layer, "quantizer"):
+            print(layer.name, "quantizer:", str(layer.quantizer))
 
     return model
 

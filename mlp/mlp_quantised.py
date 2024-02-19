@@ -19,8 +19,11 @@ class MLPRegularQuantised(keras.Model):
     """
 
     def __init__(self, layers: list, activ: str = "relu", nbits: int = 8,  **kwargs):
-        super(MLPRegular, self).__init__(name="MLPRegularised")
+        super(MLPRegularQuantised, self).__init__(name="MLPRegularQuantised")
         self.nclasses = 5
+
+        quantizer = format_quantiser(nbits)
+        activ = format_qactivation(activ, nbits)
 
         self.mlp = keras.Sequential()
         for layer_nodes in layers:
@@ -29,16 +32,16 @@ class MLPRegularQuantised(keras.Model):
                     qkeras.QDense(
                         layer_nodes,
                         kernel_regularizer=keras.regularizers.L1(kwargs['l1_coeff']),
-                        bias_quantizer=nbit,
-                        kernel_quantizer=nbits,
+                        bias_quantizer=quantizer,
+                        kernel_quantizer=quantizer,
                     )
                 )
             else:
                 self.mlp.add(
                     qkeras.QDense(
                         layer_nodes,
-                        bias_quantizer=nbit,
-                        kernel_quantizer=nbits,
+                        bias_quantizer=quantizer,
+                        kernel_quantizer=quantizer,
                     )
                 )
             self.mlp.add(qkeras.QActivation(activ))

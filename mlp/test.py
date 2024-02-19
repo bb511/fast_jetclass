@@ -11,6 +11,9 @@ import numpy as np
 import tensorflow as tf
 from tensorflow import keras
 import sklearn
+import qkeras
+from tensorflow_model_optimization.python.core.sparsity.keras import pruning_wrapper
+from tensorflow_model_optimization.sparsity.keras import strip_pruning
 
 # keras.utils.set_random_seed(123)
 
@@ -89,7 +92,12 @@ def compute_average_metrics(tprs_baseline, kfold_metrics: dict, kfold_root_dir: 
 def evaluate_model(data, hyperparams: dict, model_dir: str, plots_dir: list, seed: int):
     """Evaluate a model given its hyperparameters."""
     model = import_model(model_dir, hyperparams)
-
+    # for layer in model.layers:
+    #     if hasattr(layer, "kernel_quantizer"):
+    #         print(layer.name, "kernel:", str(layer.kernel_quantizer_internal), "bias:", str(layer.bias_quantizer_internal))
+    #     elif hasattr(layer, "quantizer"):
+    #         print(layer.name, "quantizer:", str(layer.quantizer))
+    # exit(1)
     if hyperparams["model_hyperparams"]["nbits"] < 1:
         # Counting of FLOPs only implemented for the floating point models.
         count_flops(model_dir, model)
@@ -157,7 +165,16 @@ def import_model(model_dir: str, hyperparams: dict):
     """Imports the model from a specified path. Model is saved in tf format."""
     print(tcols.HEADER + "Importing the model..." + tcols.ENDC)
     util.util.nice_print_dictionary("DS hps:", hyperparams["model_hyperparams"])
-    model = keras.models.load_model(model_dir, compile=False)
+    model = keras.models.load_model(
+        model_dir,
+        compile=False,
+        custom_objects={
+            "QDense": qkeras.QDense,
+            "QActivation": qkeras.QActivation,
+            "quantized_bits": qkeras.quantized_bits,
+            "PruneLowMagnitude": pruning_wrapper.PruneLowMagnitude
+        }
+    )
     model.summary(expand_nested=True)
 
     return model

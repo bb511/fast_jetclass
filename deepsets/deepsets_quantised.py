@@ -27,25 +27,25 @@ class DeepSetsInvQuantised(keras.Model):
     ):
         super(DeepSetsInvQuantised, self).__init__(name="DeepSetsInvQuantised")
         nclass = 5
-        nbits = format_quantiser(nbits)
+        quant = format_quantiser(nbits)
         activ = format_qactivation(activ, nbits)
 
         self.phi = keras.Sequential(
             [
-                qkeras.QDense(nnodes_phi, kernel_quantizer=nbits, bias_quantizer=nbits),
+                qkeras.QDense(nnodes_phi, kernel_quantizer=quant, bias_quantizer=quant),
                 qkeras.QActivation(activ),
-                qkeras.QDense(nnodes_phi, kernel_quantizer=nbits, bias_quantizer=nbits),
+                qkeras.QDense(nnodes_phi, kernel_quantizer=quant, bias_quantizer=quant),
                 qkeras.QActivation(activ),
-                qkeras.QDense(nnodes_phi, kernel_quantizer=nbits, bias_quantizer=nbits),
+                qkeras.QDense(nnodes_phi, kernel_quantizer=quant, bias_quantizer=quant),
                 qkeras.QActivation(activ),
             ]
         )
 
         self.rho = keras.Sequential(
             [
-                qkeras.QDense(nnodes_rho, kernel_quantizer=nbits, bias_quantizer=nbits),
+                qkeras.QDense(nnodes_rho, kernel_quantizer=quant, bias_quantizer=quant),
                 qkeras.QActivation(activ),
-                qkeras.QDense(nclass, kernel_quantizer=nbits, bias_quantizer=nbits),
+                qkeras.QDense(nclass, kernel_quantizer=quant, bias_quantizer=quant),
             ]
         )
 

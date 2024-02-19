@@ -22,24 +22,24 @@ def deepsets_invariant_synth(
     """
 
     nclasses = 5
-    nbits = format_quantiser(nbits)
+    quant = format_quantiser(nbits)
     activ = format_qactivation(activ, nbits)
 
     deepsets_input = keras.Input(shape=input_shape, name="input_layer")
 
     # Phi network.
     x_phi = qkeras.QDense(
-        nnodes_phi, kernel_quantizer=nbits, bias_quantizer=nbits, name="phi1"
+        nnodes_phi, kernel_quantizer=quant, bias_quantizer=quant, name="phi1"
     )(deepsets_input)
     x_phi = qkeras.QActivation(activ)(x_phi)
 
     x_phi = qkeras.QDense(
-        nnodes_phi, kernel_quantizer=nbits, bias_quantizer=nbits, name="phi2"
+        nnodes_phi, kernel_quantizer=quant, bias_quantizer=quant, name="phi2"
     )(x_phi)
     x_phi = qkeras.QActivation(activ)(x_phi)
 
     x_phi = qkeras.QDense(
-        nnodes_phi, kernel_quantizer=nbits, bias_quantizer=nbits, name="phi3"
+        nnodes_phi, kernel_quantizer=quant, bias_quantizer=quant, name="phi3"
     )(x_phi)
     phi_output = qkeras.QActivation(activ)(x_phi)
 
@@ -52,7 +52,7 @@ def deepsets_invariant_synth(
 
     # Rho network.
     x_rho = qkeras.QDense(
-        nnodes_rho, kernel_quantizer=nbits, bias_quantizer=nbits, name="rho"
+        nnodes_rho, kernel_quantizer=quant, bias_quantizer=quant, name="rho"
     )(inv_operation_output)
     x_rho = qkeras.QActivation(activ)(x_rho)
 

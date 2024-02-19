@@ -24,7 +24,7 @@ if args.gpu:
 
 # Import the data.
 kfolds = 5
-nconst = 32
+nconst = 8
 
 data_folder_path = '../../ds_data'
 jets_path = f'jets_{nconst}constituents_ptetaphi_robust_fast'
@@ -40,22 +40,22 @@ data_hyperparams = {
 
 training_hyperparams = {
     "epochs":       300,
-    "batch":        1024,
-    "lr":           0.0043,
+    "batch":        128,
+    "lr":           0.0013,
     "pruning_rate": 0
 }
 
 compilation_hyperparams = {
     "optimizer": "adam",
-    # "loss":      "softmax_with_crossentropy",
-    "loss":      "categorical_crossentropy",
+    "loss":      "softmax_with_crossentropy",
+    # "loss":      "categorical_crossentropy",
     "metrics":   ["categorical_accuracy"],
 }
 
 model_hyperparams = {
-    "layers": [30, 84, 32, 84, 64],
+    "layers": [120, 60, 32, 64, 64, 64, 32, 44],
     "activ": 'relu',
-    "l1_coeff": 1.30e-05,
+    "l1_coeff": 0.0000131,
     "nbits": args.nbits,
 }
 

@@ -20,7 +20,7 @@ if args.gpu:
 
 # Import the data.
 kfolds = 5
-nconst = 32
+nconst = 8
 
 data_folder_path = '../../ds_data'
 jets_path = f'jets_{nconst}constituents_ptetaphi_robust_fast'

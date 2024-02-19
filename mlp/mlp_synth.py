@@ -19,7 +19,7 @@ def mlp_regularised_synth(
     """Quantised MLP like in mlp_quantised.py but in a format consistent with hls4ml."""
 
     nclasses = 5
-    nbits = format_quantiser(nbits)
+    quantizer = format_quantiser(nbits)
     activ = format_qactivation(activ, nbits)
 
     mlp_input = keras.Input(shape=input_shape, name="input_layer")
@@ -27,8 +27,8 @@ def mlp_regularised_synth(
     mlp_layer = qkeras.QDense(
         layers[0],
         kernel_regularizer=keras.regularizers.L1(kwargs['l1_coeff']),
-        bias_quantizer=nbits,
-        kernel_quantizer=nbits,
+        bias_quantizer=quantizer,
+        kernel_quantizer=quantizer,
     )(mlp_layer)
     mlp_activ = qkeras.QActivation(activ)(mlp_layer)
 
@@ -38,15 +38,16 @@ def mlp_regularised_synth(
             mlp_layer = qkeras.QDense(
                 layer_nodes,
                 kernel_regularizer=keras.regularizers.L1(kwargs['l1_coeff']),
-                bias_quantizer=nbits,
-                kernel_quantizer=nbits,
+                bias_quantizer=quantizer,
+                kernel_quantizer=quantizer,
             )(mlp_activ)
         else:
             mlp_layer = qkeras.QDense(
                 layer_nodes,
-                bias_quantizer=nbits,
-                kernel_quantizer=nbits,
+                bias_quantizer=quantizer,
+                kernel_quantizer=quantizer,
             )(mlp_activ)
+        print(activ)
         mlp_activ = qkeras.QActivation(activ)(mlp_layer)
 
     mlp_layer = KL.Dense(nclasses)(mlp_activ)
