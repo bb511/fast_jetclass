@@ -23,11 +23,11 @@ from util.terminal_colors import tcols
 
 def main(args):
     util.util.device_info()
-    seed = args['const_seed']
-    model_dir = args['model_dir']
-    plots_dir = util.util.make_output_directories(args['model_dir'], f"plots_{seed}")
+    seed = args["const_seed"]
+    model_dir = args["model_dir"]
+    plots_dir = util.util.make_output_directories(args["model_dir"], f"plots_{seed}")
     synthesis_dir = util.util.make_output_directories(
-        args['model_dir'], 'synthesis_final'
+        args["model_dir"], "synthesis_final"
     )
 
     print(tcols.OKGREEN + "\nIMPORTING DATA AND MODEL\n" + tcols.ENDC)
@@ -47,8 +47,8 @@ def main(args):
         saturation_mode="AP_SAT",
     )
 
-    for layer in config['LayerName'].keys():
-        config['LayerName'][layer]['Trace'] = True
+    for layer in config["LayerName"].keys():
+        config["LayerName"][layer]["Trace"] = True
 
     hls_model = hls4ml.converters.convert_from_keras_model(
         model,
@@ -78,34 +78,34 @@ def main(args):
 
 def config_hls4ml(config: dict):
     """Adds additional configuration to hls4ml config dictionary."""
-    config['Model']['Strategy']= 'Latency'
+    config["Model"]["Strategy"] = "Latency"
 
-    config['LayerName']['phi1']['ParallelizationFactor'] = 1
-    config['LayerName']['phi1']['ReuseFactor'] = 8
-    config['LayerName']['phi1']['Strategy'] = "Latency"
-    config["LayerName"]['phi1']["ConvImplementation"] = "Pointwise"
-    config['LayerName']['phi2']['ParallelizationFactor'] = 1
-    config['LayerName']['phi2']['ReuseFactor'] = 8
-    config['LayerName']['phi2']['Strategy'] = "Latency"
-    config["LayerName"]['phi2']["ConvImplementation"] = "Pointwise"
-    config['LayerName']['phi3']['ParallelizationFactor'] = 1
-    config['LayerName']['phi3']['ReuseFactor'] = 8
-    config['LayerName']['phi3']['Strategy'] = "Latency"
-    config["LayerName"]['phi3']["ConvImplementation"] = "Pointwise"
+    config["LayerName"]["phi1"]["ParallelizationFactor"] = 1
+    config["LayerName"]["phi1"]["ReuseFactor"] = 8
+    config["LayerName"]["phi1"]["Strategy"] = "Latency"
+    config["LayerName"]["phi1"]["ConvImplementation"] = "Pointwise"
+    config["LayerName"]["phi2"]["ParallelizationFactor"] = 1
+    config["LayerName"]["phi2"]["ReuseFactor"] = 8
+    config["LayerName"]["phi2"]["Strategy"] = "Latency"
+    config["LayerName"]["phi2"]["ConvImplementation"] = "Pointwise"
+    config["LayerName"]["phi3"]["ParallelizationFactor"] = 1
+    config["LayerName"]["phi3"]["ReuseFactor"] = 8
+    config["LayerName"]["phi3"]["Strategy"] = "Latency"
+    config["LayerName"]["phi3"]["ConvImplementation"] = "Pointwise"
 
-    config["LayerName"]['input_layer']["Precision"] = "ap_fixed<12,4,AP_RND,AP_SAT>"
-    util.util.nice_print_dictionary('HLS Configuration', config)
+    config["LayerName"]["input_layer"]["Precision"] = "ap_fixed<12,4,AP_RND,AP_SAT>"
+    util.util.nice_print_dictionary("HLS Configuration", config)
 
     return config
 
 
 def import_data(hyperparams):
     """Import the data used for training and validating the network."""
-    fpath = hyperparams['data_hyperparams']['fpath']
-    if hyperparams['data_hyperparams']['fname_test']:
-        fname = hyperparams['data_hyperparams']['fname_test'].rsplit('_', 1)[0]
+    fpath = hyperparams["data_hyperparams"]["fpath"]
+    if hyperparams["data_hyperparams"]["fname_test"]:
+        fname = hyperparams["data_hyperparams"]["fname_test"].rsplit("_", 1)[0]
     else:
-        fname = hyperparams['data_hyperparams']['fname']
+        fname = hyperparams["data_hyperparams"]["fname"]
 
     return util.data.Data(fpath=fpath, fname=fname, only_test=True)
 
@@ -121,11 +121,11 @@ def import_model(model_dir: str, hyperparams: dict):
             "QDense": qkeras.QDense,
             "QActivation": qkeras.QActivation,
             "quantized_bits": qkeras.quantized_bits,
-            "PruneLowMagnitude": pruning_wrapper.PruneLowMagnitude
-        }
+            "PruneLowMagnitude": pruning_wrapper.PruneLowMagnitude,
+        },
     )
-    if 'pruning_rate' in hyperparams['training_hyperparams']:
-        if hyperparams['training_hyperparams']['pruning_rate'] > 0:
+    if "pruning_rate" in hyperparams["training_hyperparams"]:
+        if hyperparams["training_hyperparams"]["pruning_rate"] > 0:
             model = strip_pruning(model)
 
     model.summary(expand_nested=True)
@@ -169,46 +169,48 @@ def run_inference(model: keras.Model, data: util.data.Data, plots_dir: list):
     return y_pred
 
 
-def profile_model(model: keras.Model, hls_model: hls4ml.model, data: np.ndarray, outdir):
+def profile_model(
+    model: keras.Model, hls_model: hls4ml.model, data: np.ndarray, outdir
+):
     """Profile the hls4ml model to see if it loses performance and if yes, where."""
     fig1, fig2, fig3, fig4 = hls4ml.model.profiling.numerical(
         model=model, hls_model=hls_model, X=data[:5000]
     )
 
-    fig1.savefig(os.path.join(outdir, 'fig1'))
-    fig2.savefig(os.path.join(outdir, 'fig2'))
-    fig3.savefig(os.path.join(outdir, 'fig3'))
-    fig4.savefig(os.path.join(outdir, 'fig4'))
+    fig1.savefig(os.path.join(outdir, "fig1"))
+    fig2.savefig(os.path.join(outdir, "fig2"))
+    fig3.savefig(os.path.join(outdir, "fig3"))
+    fig4.savefig(os.path.join(outdir, "fig4"))
     hls4ml.utils.plot_model(
         hls_model,
         show_shapes=True,
         show_precision=True,
-        to_file=os.path.join(outdir, 'model_plot.png')
+        to_file=os.path.join(outdir, "model_plot.png"),
     )
 
 
 def run_trace(
     model: keras.Model, hls_model: hls4ml.model, data: np.ndarray, sample_number: int
-    ):
+):
     """Shows output of every layer given a certain sample."""
     hls4ml_pred, hls4ml_trace = hls_model.trace(data)
     keras_trace = hls4ml.model.profiling.get_ymodel_keras(model, data)
     for layer in model.layers:
-        if layer.name == 'input_layer':
+        if layer.name == "input_layer":
             continue
         print(f"Layer output HLS4ML for {layer.name}")
         print(hls4ml_trace[layer.name][sample_number])
         print(f"Layer output KERAS for {layer.name}")
         print(keras_trace[layer.name][sample_number])
 
-        print('')
+        print("")
 
 
 def get_model_activations(model: keras.Model):
     """Loooks at the layers in a model and returns a list with all the activations."""
     model_activations = []
     for layer in model.layers:
-        if 'activation' in layer.name:
+        if "activation" in layer.name:
             model_activations.append(layer.name)
 
     return model_activations

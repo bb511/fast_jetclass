@@ -12,6 +12,7 @@ from tensorflow_model_optimization.python.core.sparsity.keras import pruning_cal
 # keras.utils.set_random_seed(123)
 
 import absl.logging
+
 absl.logging.set_verbosity(absl.logging.ERROR)
 
 import util.util
@@ -26,7 +27,7 @@ from . import util as dsutil
 
 def main(args):
     util.util.device_info()
-    outdir = util.util.make_output_directory("trained_deepsets", args["outdir"])
+    outdir = util.util.make_output_directory("trained_mlps", args["outdir"])
     util.util.save_hyperparameters_file(args, outdir)
 
     data = util.data.Data.load_kfolds(**args["data_hyperparams"])
@@ -41,8 +42,9 @@ def main(args):
 def build_model(args: dict, data: util.data.Data):
     """Instantiate the model with chosen hyperparams and return it."""
     print(tcols.HEADER + "\n\nINSTANTIATING MODEL" + tcols.ENDC)
-    model = dsutil.choose_deepsets(
-        args["deepsets_type"],
+
+    model = dsutil.choose_mlp(
+        args["mlp_type"],
         data.ntrain_jets,
         data.ncons,
         data.nfeat,
@@ -51,6 +53,17 @@ def build_model(args: dict, data: util.data.Data):
         args["training_hyperparams"],
     )
     model.summary(expand_nested=True)
+    for layer in model.layers:
+        if hasattr(layer, "kernel_quantizer"):
+            print(
+                layer.name,
+                "kernel:",
+                str(layer.kernel_quantizer_internal),
+                "bias:",
+                str(layer.bias_quantizer_internal),
+            )
+        elif hasattr(layer, "quantizer"):
+            print(layer.name, "quantizer:", str(layer.quantizer))
 
     return model
 

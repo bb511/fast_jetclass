@@ -18,7 +18,7 @@ class MLPRegularQuantised(keras.Model):
         kwargs: Regularisation parameters.
     """
 
-    def __init__(self, layers: list, activ: str = "relu", nbits: int = 8,  **kwargs):
+    def __init__(self, layers: list, activ: str = "relu", nbits: int = 8, **kwargs):
         super(MLPRegularQuantised, self).__init__(name="MLPRegularQuantised")
         self.nclasses = 5
 
@@ -27,11 +27,11 @@ class MLPRegularQuantised(keras.Model):
 
         self.mlp = keras.Sequential()
         for layer_nodes in layers:
-            if 'l1_coeff' in kwargs:
+            if "l1_coeff" in kwargs:
                 self.mlp.add(
                     qkeras.QDense(
                         layer_nodes,
-                        kernel_regularizer=keras.regularizers.L1(kwargs['l1_coeff']),
+                        kernel_regularizer=keras.regularizers.L1(kwargs["l1_coeff"]),
                         bias_quantizer=quantizer,
                         kernel_quantizer=quantizer,
                     )

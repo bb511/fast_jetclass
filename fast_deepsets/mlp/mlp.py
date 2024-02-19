@@ -50,16 +50,17 @@ class MLPRegular(keras.Model):
 
         self.mlp = keras.Sequential()
         for layer_nodes in layers:
-            if 'l1_coeff' in kwargs:
+            if "l1_coeff" in kwargs:
                 self.mlp.add(
                     KL.Dense(
                         layer_nodes,
-                        kernel_regularizer=keras.regularizers.L1(kwargs['l1_coeff']))
+                        kernel_regularizer=keras.regularizers.L1(kwargs["l1_coeff"]),
+                    )
                 )
             else:
                 self.mlp.add(KL.Dense(layer_nodes))
-            if 'dropout_rate' in kwargs:
-                self.mlp.add(KL.Dropout(kwargs['dropout_rate']))
+            if "dropout_rate" in kwargs:
+                self.mlp.add(KL.Dropout(kwargs["dropout_rate"]))
             self.mlp.add(KL.Activation(activ))
 
         self.mlp.add(KL.Dense(self.nclasses))

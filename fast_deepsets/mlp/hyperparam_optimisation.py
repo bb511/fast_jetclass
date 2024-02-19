@@ -74,9 +74,8 @@ class Objective:
         )
 
         nlayers = trial.suggest_categorical(
-            'nlayers', self.args['model_hyperparams']['nlayers']
-            )
-
+            "nlayers", self.args["model_hyperparams"]["nlayers"]
+        )
 
         layers = []
         if self.jet_data.ncons == 8:
@@ -88,19 +87,21 @@ class Objective:
             layers.append(84)
 
         for layer in range(nlayers - len(layers)):
-            layers.append(trial.suggest_categorical(
-                f'layer{layer}_nodes', self.args['model_hyperparams']['nnodes']
-                ))
+            layers.append(
+                trial.suggest_categorical(
+                    f"layer{layer}_nodes", self.args["model_hyperparams"]["nnodes"]
+                )
+            )
 
         self.model_hyperparams.update(
             {
                 "layers": layers,
                 "l1_coeff": trial.suggest_float(
                     "l1_coeff", *self.args["model_hyperparams"]["l1_coeff"], log=True
-                    ),
+                ),
                 # "dropout_rate": trial.suggest_float(
-                    # "dropout_rate", *self.args["model_hyperparams"]["dropout_rate"]
-                    # ),
+                # "dropout_rate", *self.args["model_hyperparams"]["dropout_rate"]
+                # ),
                 "activ": trial.suggest_categorical(
                     "activ", self.args["model_hyperparams"]["activ"]
                 ),

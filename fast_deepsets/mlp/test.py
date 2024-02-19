@@ -172,8 +172,8 @@ def import_model(model_dir: str, hyperparams: dict):
             "QDense": qkeras.QDense,
             "QActivation": qkeras.QActivation,
             "quantized_bits": qkeras.quantized_bits,
-            "PruneLowMagnitude": pruning_wrapper.PruneLowMagnitude
-        }
+            "PruneLowMagnitude": pruning_wrapper.PruneLowMagnitude,
+        },
     )
     model.summary(expand_nested=True)
 

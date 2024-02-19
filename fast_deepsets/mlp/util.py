@@ -30,22 +30,21 @@ def choose_mlp(
     for key in model_hyperparams:
         print(f"{key}: {model_hyperparams[key]}")
 
-
     mlp_type, model_hyperparams = check_quantised_model(mlp_type, model_hyperparams)
     model_hyperparams = check_synthesis_model(
         mlp_type, model_hyperparams, nconst, nfeats
     )
 
     switcher = {
-        "mlp":      lambda: MLP(**model_hyperparams),
-        "mlp_reg":  lambda: MLPRegular(**model_hyperparams),
+        "mlp": lambda: MLP(**model_hyperparams),
+        "mlp_reg": lambda: MLPRegular(**model_hyperparams),
         "qmlp_reg": lambda: MLPRegularQuantised(**model_hyperparams),
         "qsmlp_reg": lambda: mlp_regularised_synth(**model_hyperparams),
     }
 
     model = switcher.get(mlp_type, lambda: None)()
 
-    if 'pruning_rate' in training_hyperparams:
+    if "pruning_rate" in training_hyperparams:
         if training_hyperparams["pruning_rate"] > 0:
             nsteps = train_njets // training_hyperparams["batch"]
             model = prune_model(model, nsteps, training_hyperparams["pruning_rate"])
@@ -106,6 +105,7 @@ def print_training_attributes(model: keras.models.Model, args: dict):
 
 def prune_model(model, nsteps: int, pruning_rate: float = 0.5):
     """Prune the weights of a model during training."""
+
     def prune_function(layer):
         pruning_params = {
             "pruning_schedule": sparsity.PolynomialDecay(
@@ -127,7 +127,7 @@ def prune_model(model, nsteps: int, pruning_rate: float = 0.5):
 
 def check_quantised_model(model_type: str, model_hyperparams: dict):
     """Check if one should impose any quantisation on the model."""
-    if 'nbits' in model_hyperparams:
+    if "nbits" in model_hyperparams:
         if model_hyperparams["nbits"] > 0:
             model_type = "q" + model_type
         else:
@@ -138,7 +138,7 @@ def check_quantised_model(model_type: str, model_hyperparams: dict):
 
 def check_synthesis_model(
     model_type: str, model_hyperparams: dict, nconst: int, nfeats: int
-    ):
+):
     """Check if the model is meant to be synthesized (uses different implementation)."""
     if model_type[0] == "s" or model_type[1] == "s":
         model_hyperparams.update({"input_shape": (nconst, nfeats)})
