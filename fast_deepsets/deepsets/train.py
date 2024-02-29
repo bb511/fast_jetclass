@@ -57,11 +57,13 @@ def main(config: dict):
 def build_model(config: dict, njets: int, input_size: tuple):
     """Instantiate the model with chosen hyperparams and return it."""
     print(tcols.HEADER + "\n\nINSTANTIATING MODEL:" + tcols.ENDC)
+    config["model_hyperparams"].update({"input_size": input_size})
     model = dsutil.choose_deepsets(config["model_type"], config["model_hyperparams"])
     model, model_callbacks = dsutil.compile_deepsets(
         njets, input_size, model, config["compilation_hyperparams"]
     )
     model.summary(expand_nested=True)
+    print(tcols.OKGREEN + f"Model FLOPs: " + tcols.ENDC, sum(model.flops.values()))
 
     return model, model_callbacks
 

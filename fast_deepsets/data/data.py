@@ -44,6 +44,7 @@ class HLS4MLData150(object):
         feats: str,
         norm: str,
         train: bool,
+        kfolds: 0,
         seed: int = None
     ):
         super().__init__()
@@ -55,6 +56,7 @@ class HLS4MLData150(object):
         self.type = "train" if self.train else "val"
         self.seed = seed
         self.min_pt = 2
+        self.kfolds = kfolds
 
         self.train_url = (
             "https://zenodo.org/records/3602260/files/hls4ml_LHCjet_150p_train.tar.gz"
@@ -71,6 +73,7 @@ class HLS4MLData150(object):
         self.x = None
         self.y = None
         self._get_processed_data()
+        self._kfold()
 
         self.njets = self.x.shape[0]
         self.nfeats = self.x.shape[-1]
@@ -121,8 +124,8 @@ class HLS4MLData150(object):
             y_preproc_file = proc_folder / f"y_preproc_{self.preproc_output_name}"
 
             if x_preproc_file.is_file() and y_preproc_file.is_file():
-                self.x_pre = np.load(x_preproc_file)
-                self.y_pre = np.load(y_preproc_file)
+                self.x_preprocessed = np.load(x_preproc_file)
+                self.y_preprocessed = np.load(y_preproc_file)
                 return 1
 
         return 0
@@ -148,19 +151,17 @@ class HLS4MLData150(object):
         """Imports the raw data files into a numpy array."""
         dfiles = list(file for file in self.data_file_dir.iterdir() if file.is_file())
         data = h5py.File(dfiles[0])
-        x_data = data["jetConstituentList"]
-        y_data = data["jets"][:, -6:-1]
+        self.x_raw = data["jetConstituentList"]
+        self.y_raw = data["jets"][:, -6:-1]
 
         for file_path in dfiles[1:]:
             data = h5py.File(file_path)
             add_x_data = data["jetConstituentList"]
             add_y_data = data["jets"][:, -6:-1]
-            x_data = np.concatenate((x_data, add_x_data), axis=0)
-            y_data = np.concatenate((y_data, add_y_data), axis=0)
+            self.x_raw = np.concatenate((self.x_raw, add_x_data), axis=0)
+            self.y_raw = np.concatenate((self.y_raw, add_y_data), axis=0)
 
-        return x_data, y_data
-
-    def _preproc_raw_data(self, x_data: np.ndarray, y_data: np.ndarray):
+    def _preproc_raw_data(self):
         """Applies preprocessing to the raw data.
 
         The raw data contains jets (samples), each comprising up to 150 particle
@@ -171,100 +172,103 @@ class HLS4MLData150(object):
         ordered in descending order of tranverse momentum value. The first n
         constituents are taken for each jet, where n is a number between 1 and 150.
         """
-        x_data, y_data = self._cut_transverse_momentum(x_data, y_data)
-        x_data = self._restrict_nb_constituents(x_data)
+        self.x_preprocessed = np.copy(self.x_raw)
+        del self.x_raw
+        self.y_preprocessed = np.copy(self.y_raw)
+        del self.y_raw
+        self._cut_transverse_momentum()
+        self._restrict_nb_constituents()
 
         proc_dir = self.root / "processed"
         if not proc_dir.is_dir():
             os.makedirs(proc_dir)
-        np.save(proc_dir / f"x_preproc_{self.preproc_output_name}", x_data)
-        np.save(proc_dir / f"y_preproc_{self.preproc_output_name}", y_data)
+        np.save(proc_dir / f"x_preproc_{self.preproc_output_name}", self.x_preprocessed)
+        np.save(proc_dir / f"y_preproc_{self.preproc_output_name}", self.y_preprocessed)
 
-        return x_data, y_data
-
-    def _process_data(
-        self, x_data: np.ndarray, y_data: np.ndarray
-    ) -> tuple[np.ndarray, np.ndarray]:
+    def _process_data(self):
         """Processes the already processed data.
 
         Namely, certain features are selected for each constituent of each jet.
         Furthermore, each feature is normalized, using a certain normalization scheme.
         For example, minmax normalization.
         """
-        x_data = self._get_features(x_data, self.feats)
-        if not self.train:
-            x_data_train = self._load_preproc_train_data()
-            x_data_train = self._get_features(x_data_train, self.feats)
-            norm_params = standardization.fit_standardisation(self.norm, x_data_train)
-            del x_data_train
-        else:
-            norm_params = standardization.fit_standardisation(self.norm, x_data)
-
-        x_data = standardization.apply_standardisation(self.norm, x_data, norm_params)
-        x_data = self._shuffle_constituents(x_data)
-        self._plot_data(x_data, y_data)
+        self.x = np.copy(self.x_preprocessed)
+        del self.x_preprocessed
+        self.y = np.copy(self.y_preprocessed)
+        del self.y_preprocessed
 
         proc_folder = self.root / "processed"
-        np.save(proc_folder / f"x_{self.proc_output_name}", x_data)
-        np.save(proc_folder / f"y_{self.proc_output_name}", y_data)
-        del x_data
-        del y_data
+        self._get_features()
+        norm_params = self._get_normalisation_params()
 
-        return (
-            np.load(proc_folder / f"x_{self.proc_output_name}"),
-            np.load(proc_folder / f"y_{self.proc_output_name}"),
-        )
+        self.x = standardization.apply_standardisation(self.norm, self.x, norm_params)
+        if self.seed and self.train:
+            self.shuffle_constituents(self.seed)
+        self._plot_data()
+
+        proc_folder = self.root / "processed"
+        np.save(proc_folder / f"x_{self.proc_output_name}", self.x)
+        np.save(proc_folder / f"y_{self.proc_output_name}", self.y)
+
+        # Free up memory after finishing the preprocessing.
+        del self.x
+        del self.y
+        self.x = np.load(proc_folder / f"x_{self.proc_output_name}")
+        self.y = np.load(proc_folder / f"y_{self.proc_output_name}")
+
+    def _get_normalisation_params(self) -> list[float]:
+        """Computes the normalisation parameters on the training data.
+
+        For example, computes the mean and standard deviation of a feature on the
+        training data and then applies it to the validation data.
+        This is done such that no information on the validation data is used before
+        passing it through the machine learning algorithm.
+        """
+        proc_folder = self.root / "processed"
+        if not self.train:
+            train_data_name = proc_output_name = (
+                f"train_{self.norm}_{self.nconst}const_{self.feats}.npy"
+            )
+            try:
+                x_data_train = np.load(proc_folder / f"x_{train_data_name}")
+            except OSError as e:
+                print("Process training data with same hyperparameters first!")
+                print("Need for normalisation of the validation data.")
+                exit(1)
+
+            return standardization.fit_standardisation(self.norm, x_data_train)
+
+        return standardization.fit_standardisation(self.norm, self.x)
 
     def _get_processed_data(self):
         """Imports the processed data if it exists. If not, generates it."""
         if not self._check_processed_data_exists():
             if not self._check_preprocessed_data_exists():
-                self.x_raw, self.y_raw = self._import_raw_data()
-                self.x_pre, self.y_pre = self._preproc_raw_data(self.x_raw, self.y_raw)
-                del self.x_raw
-                del self.y_raw
+                self._import_raw_data()
+                self._preproc_raw_data()
 
-            self.x, self.y = self._process_data(self.x_pre, self.y_pre)
-            del self.x_pre
-            del self.y_pre
+            self._process_data()
 
-    def _load_preproc_train_data(self):
-        """Loads preprocessed train data to infer normalisation parameters from."""
-        preproc_file_name = f"x_preproc_train_{self.nconst}const.npy"
-        try:
-            x_data_train = np.load(self.root / "processed" / preproc_file_name)
-        except OSError as e:
-            print(
-                f"Process the training data with {self.nconst} const and"
-                + f"{self.min_pt} minimum pt before the test data."
-            )
-            print("Exiting...")
-            exit(1)
-
-        return x_data_train
-
-    def _plot_data(self, x_data: np.ndarray, y_data: np.ndarray):
+    def _plot_data(self):
         """Plots the normalised data."""
         print("Plotting data...")
         plots_folder = self.root / f"plots_{self.norm}_{self.nconst}const_{self.feats}"
         if not plots_folder.is_dir():
             os.makedirs(plots_folder)
 
-        plots.constituent_number(plots_folder, x_data, self.type)
-        plots.normalised_data(plots_folder, x_data, y_data, self.type, self.feats)
+        plots.constituent_number(plots_folder, self.x, self.type)
+        plots.normalised_data(plots_folder, self.x, self.y, self.type, self.feats)
 
-    def _get_features(self, data: np.ndarray, feat_selection: str) -> np.ndarray:
+    def _get_features(self) -> np.ndarray:
         """Choose what feature selection to employ on the data. Return shape."""
         switcher = {
-            "ptetaphi": lambda: self._select_features_ptetaphi(data),
-            "allfeats": lambda: self._select_features_all(data),
+            "ptetaphi": lambda: self._select_features_ptetaphi(self.x),
+            "allfeats": lambda: self._select_features_all(self.x),
         }
 
-        data = switcher.get(feat_selection, lambda: None)()
-        if data is None:
+        self.x = switcher.get(self.feats, lambda: None)()
+        if self.x is None:
             raise TypeError("Feature selection name not valid!")
-
-        return data
 
     def _select_features_ptetaphi(self, data: np.ndarray) -> np.ndarray:
         """Selects (pT, etarel, phirel) features from the numpy jet array."""
@@ -279,63 +283,67 @@ class HLS4MLData150(object):
         """
         return data[:, :, :]
 
-    def _cut_transverse_momentum(
-        self, x_data: np.ndarray, y_data: np.ndarray
-    ) -> tuple[np.ndarray, np.ndarray]:
+    def _cut_transverse_momentum(self):
         """Remove constituents that are below a certain transverse momentum from jets.
 
         If a jet has no constituents with a momentum above the given threshold, then
         the whole jet is removed.
         """
-        boolean_mask = x_data[:, :, 5] > self.min_pt
+        boolean_mask = self.x_preprocessed[:, :, 5] > self.min_pt
         structure_memory = boolean_mask.sum(axis=1)
-        x_data = np.split(x_data[boolean_mask, :], np.cumsum(structure_memory)[:-1])
-        x_data = [jet_const for jet_const in x_data if jet_const.size > 0]
-        y_data = y_data[structure_memory > 0]
+        self.x_preprocessed = np.split(
+            self.x_preprocessed[boolean_mask, :], np.cumsum(structure_memory)[:-1]
+        )
+        self.x_preprocessed = [
+            jet_const for jet_const in self.x_preprocessed if jet_const.size > 0
+        ]
+        self.y_preprocessed = self.y_preprocessed[structure_memory > 0]
 
-        return x_data, y_data
-
-    def _restrict_nb_constituents(self, x_data: np.ndarray) -> np.ndarray:
+    def _restrict_nb_constituents(self) -> np.ndarray:
         """Force each jet to have an equal number of constituents.
 
         If the jet has more constituents then the given number, the surplus is discarded.
         If the jet has less than the given number, then the jet vector is padded with 0
         values until its length reaches the given number.
         """
-        for jet in range(len(x_data)):
-            if x_data[jet].shape[0] >= self.nconst:
-                x_data[jet] = x_data[jet][: self.nconst, :]
+        for jet in range(len(self.x_preprocessed)):
+            if self.x_preprocessed[jet].shape[0] >= self.nconst:
+                self.x_preprocessed[jet] = self.x_preprocessed[jet][: self.nconst, :]
             else:
-                padding_length = self.nconst - x_data[jet].shape[0]
-                x_data[jet] = np.pad(x_data[jet], ((0, padding_length), (0, 0)))
+                padding_length = self.nconst - self.x_preprocessed[jet].shape[0]
+                self.x_preprocessed[jet] = np.pad(
+                    self.x_preprocessed[jet], ((0, padding_length), (0, 0))
+                )
+        self.x_preprocessed = np.array(self.x_preprocessed)
 
-        return np.array(x_data)
-
-    def _shuffle_constituents(self, data: np.ndarray) -> np.ndarray:
+    def shuffle_constituents(self, seed: int):
         """Shuffles the constituents based on an array of seeds.
 
         Each jet's constituents is shuffled with respect to a seed that is fixed.
         This seed is different for each jet.
         """
-        if not self.seed:
-            return data
-
         print("Shuffling constituents...")
-        rng = np.random.default_rng(self.seed)
-        seeds = rng.integers(low=0, high=10000, size=data.shape[0])
+        rng = np.random.default_rng(seed)
+        seeds = rng.integers(low=0, high=10000, size=self.x.shape[0])
 
         for jet_idx, seed in enumerate(seeds):
-            shuffling = np.random.RandomState(seed=seed).permutation(data.shape[1])
-            data[jet_idx, :] = data[jet_idx, shuffling]
+            shuffling = np.random.RandomState(seed=seed).permutation(self.x.shape[1])
+            self.x[jet_idx, :] = self.x[jet_idx, shuffling]
 
         print(tcols.OKGREEN + f"Shuffling done! \U0001F0CF" + tcols.ENDC)
 
-        return data
+    def _kfold(self):
+        """Creates a kfolded view of the data."""
+        if self.kfolds <= 0 or not self.train:
+            return
 
-    def kfold_data(self, k: int = 5) -> np.ndarray:
-        """Splits the data into a number of kfolds."""
-        print(tcols.OKGREEN + f"Splitting the data into k={k} kfolds." + tcols.ENDC)
-        kfolder = sklearn.model_selection.StratifiedKFold(n_splits=k, shuffle=True)
+        print(tcols.OKGREEN)
+        print(f"Splitting the data into k={self.kfolds} kfolds.")
+        print(tcols.ENDC)
+
+        kfolder = sklearn.model_selection.StratifiedKFold(
+            n_splits=self.kfolds, shuffle=True
+        )
         # Convert back from one-hot to class targets since sklearn function does not
         # like one-hot targets.
         self.kfolds = kfolder.split(self.x, np.argmax(self.y, axis=-1))

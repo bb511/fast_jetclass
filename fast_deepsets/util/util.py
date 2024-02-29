@@ -32,14 +32,12 @@ def make_output_directory(location: str, outdir: str) -> str:
 def import_data(config: dict, train: bool):
     """Imports the jet data, ready for training."""
     print(tcols.OKGREEN + "Importing data... " + tcols.ENDC, end="")
-    jet_data = data.HLS4MLData150(**config, train)
+    jet_data = data.HLS4MLData150(**config, train=train)
 
     print(tcols.OKGREEN, end="")
     print("training data imported!" if train else "validation data imported!")
     print(tcols.ENDC)
     jet_data.show_details()
-    if train and config["kfolds"]:
-        jet_data.kfold_data(config["kfolds"])
 
     return jet_data
 

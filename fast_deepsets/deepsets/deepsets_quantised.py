@@ -11,50 +11,78 @@ import qkeras
 class DeepSetsInvQuantised(keras.Model):
     """Deep sets permutation invariant graph network https://arxiv.org/abs/1703.06114.
 
-    Attributes:
-        nnodes_phi: Number of nodes in the layers of the phi neural network.
-        nnodes_rho: Number of nodes in the layers of the rho neural network.
-        activ: Activation function to use between the dense layers.
-        nbits: Bit width to quantised the layers to.
-    """
+    The weights of this model are quantised to a given number of bits.
 
+    Attributes:
+        input_size: Tuple with the shape of the input data.
+        phi_layers: List of number of nodes for each layer of the phi network.
+        rho_layers: List of number of nodes for each layer of the rho network.
+        activ: String that specifies Activation function to use between the dense layers.
+        aggreg: String that specifies the type of aggregator to use after the phi net.
+        output_dim: The output dimension of the network. For a supervised task, this is
+            equal to the number of classes.
+        nbits: Number of bits to quantise the weights of the model to.
+    """
     def __init__(
         self,
-        nnodes_phi: int = 32,
-        nnodes_rho: int = 16,
-        activ: str = "elu",
-        nbits: int = 8,
+        input_size: tuple,
+        phi_layers: list = [32, 32, 32],
+        rho_layers: list = [16],
+        output_dim: int = 5,
+        activ: str = "relu",
+        aggreg: str =  "mean",
+        nbits: int = 8
     ):
-        super(DeepSetsInvQuantised, self).__init__(name="DeepSetsInvQuantised")
-        nclass = 5
-        quant = format_quantiser(nbits)
-        activ = format_qactivation(activ, nbits)
+        super(DeepSetsInvQuantised, self).__init__(name="InvariantDeepsetsQuantised")
+        self.input_size = input_size
+        self.output_dim = output_dim
+        self.phi_layers = phi_layers
+        self.rho_layers = rho_layers
+        self.aggreg = aggreg
+        self.quant = format_quantiser(nbits)
+        self.activ = format_qactivation(activ, nbits)
 
-        self.phi = keras.Sequential(
-            [
-                qkeras.QDense(nnodes_phi, kernel_quantizer=quant, bias_quantizer=quant),
-                qkeras.QActivation(activ),
-                qkeras.QDense(nnodes_phi, kernel_quantizer=quant, bias_quantizer=quant),
-                qkeras.QActivation(activ),
-                qkeras.QDense(nnodes_phi, kernel_quantizer=quant, bias_quantizer=quant),
-                qkeras.QActivation(activ),
-            ]
-        )
+        self._build_phi()
+        self._build_agg()
+        self._build_rho()
+        self.output_layer = KL.Dense(self.output_dim, name="OutputLayer")
 
-        self.rho = keras.Sequential(
-            [
-                qkeras.QDense(nnodes_rho, kernel_quantizer=quant, bias_quantizer=quant),
-                qkeras.QActivation(activ),
-                qkeras.QDense(nclass, kernel_quantizer=quant, bias_quantizer=quant),
-            ]
-        )
+    def _build_phi(self):
+        self.phi = keras.Sequential(name="PhiNetwork")
+        for layer in self.phi_layers:
+            self.phi.add(qkeras.QDense(
+                layer, kernel_quantizer=self.quant, bias_quantizer=self.quant
+            ))
+            self.phi.add(qkeras.QActivation(self.activ))
+
+    def _build_agg(self):
+        switcher = {
+            "mean": lambda: tf.reduce_mean,
+            "max": lambda: tf.reduce_max,
+        }
+        self.agg = switcher.get(self.aggreg, lambda: None)()
+        if self.agg is None:
+            raise ValueError(
+                "Given aggregation string is not implemented. "
+                "See deepsets.py and add string and corresponding object there."
+            )
+
+    def _build_rho(self):
+        input_shape = self.phi_layers[-1]
+        self.rho = keras.Sequential(name="RhoNetwork")
+        for layer in self.rho_layers:
+            self.rho.add(qkeras.QDense(
+                layer, kernel_quantizer=self.quant, bias_quantizer=self.quant
+            ))
+            self.rho.add(qkeras.QActivation(self.activ))
 
     def call(self, inputs: np.ndarray, **kwargs):
         phi_output = self.phi(inputs)
-        sum_output = tf.reduce_mean(phi_output, axis=1)
-        rho_output = self.rho(sum_output)
+        agg_output = self.agg(phi_output, axis=1)
+        rho_output = self.rho(agg_output)
+        logits = self.output_layer(rho_output)
 
-        return rho_output
+        return logits
 
 
 def format_quantiser(nbits: int):

@@ -2,11 +2,11 @@
 
 # Run the testing of the interaction network.
 import argparse
-import sys
 import os
-sys.path.append("..")
 
-from deepsets.test import main
+from fast_deepsets.deepsets.test import main
+
+
 parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 parser.add_argument("--root_dir", type=str, help="Model root directory path.")
 parser.add_argument("--gpu", type=str, default="0", help="GPU to run on.")
