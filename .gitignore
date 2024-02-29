@@ -3,6 +3,7 @@ trained_deepsets/
 trained_mlps/
 synthed_deepsets/
 logs/
+data/
 *.logs
 *.out
 

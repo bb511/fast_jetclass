@@ -9,6 +9,7 @@ import tensorflow as tf
 from tensorflow import keras
 
 from .terminal_colors import tcols
+from fast_deepsets.data import data
 
 
 def make_output_directories(locations: list, outdir: str):
@@ -28,6 +29,21 @@ def make_output_directory(location: str, outdir: str) -> str:
     return outdir
 
 
+def import_data(config: dict, train: bool):
+    """Imports the jet data, ready for training."""
+    print(tcols.OKGREEN + "Importing data... " + tcols.ENDC, end="")
+    jet_data = data.HLS4MLData150(**config, train)
+
+    print(tcols.OKGREEN, end="")
+    print("training data imported!" if train else "validation data imported!")
+    print(tcols.ENDC)
+    jet_data.show_details()
+    if train and config["kfolds"]:
+        jet_data.kfold_data(config["kfolds"])
+
+    return jet_data
+
+
 def nice_print_dictionary(dictionary_name: str, dictionary: dict):
     """Logs useful details about the data used to train the interaction network."""
     print(tcols.HEADER + f"\n{dictionary_name}" + tcols.ENDC)
@@ -45,11 +61,11 @@ def device_info():
     if gpu_devices:
         details = tf.config.experimental.get_device_details(gpu_devices[0])
         print(tcols.OKCYAN + f"\nGPU: {details.get('device_name')}" + tcols.ENDC)
-        print("Activating procedural GPU memory growth...")
+        print("Activating procedural GPU memory growth...\n")
         for gpu in gpu_devices:
             tf.config.experimental.set_memory_growth(gpu, True)
     else:
-        print(tcols.WARNING + "\nNo GPU detected. Running on CPU." + tcols.ENDC)
+        print(tcols.WARNING + "\nNo GPU detected. Running on CPU.\n" + tcols.ENDC)
 
 
 def save_hyperparameters_file(hyperparams: dict, outdir: str):
@@ -86,16 +102,11 @@ def load_hyperparameter_file(model_dir: str):
     return hyperparams
 
 
-def print_training_attributes(model: keras.models.Model, args: dict):
+def print_training_attributes(model: keras.models.Model, train_hyperparams: dict):
     """Prints model attributes so all interesting infromation is printed."""
-    compilation_hyperparams = args["intnet_compilation"]
-    train_hyperparams = args["training_hyperparams"]
-
     print("\nTraining parameters")
     print("-------------------")
-    print(tcols.OKGREEN + "Optimiser: \t" + tcols.ENDC, model.optimizer.get_config())
-    print(tcols.OKGREEN + "Batch size: \t" + tcols.ENDC, train_hyperparams["batch"])
-    print(tcols.OKGREEN + "Learning rate: \t" + tcols.ENDC, train_hyperparams["lr"])
+    print(tcols.OKGREEN + "Optimizer: \t" + tcols.ENDC, model.optimizer.get_config())
+    print(tcols.OKGREEN + "Batch size: \t" + tcols.ENDC, train_hyperparams["batch_size"])
     print(tcols.OKGREEN + "Training epochs:" + tcols.ENDC, train_hyperparams["epochs"])
-    print(tcols.OKGREEN + "Loss: \t\t" + tcols.ENDC, compilation_hyperparams["loss"])
     print("")

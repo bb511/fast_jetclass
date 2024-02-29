@@ -14,9 +14,9 @@ import sklearn
 
 # keras.utils.set_random_seed(123)
 
-import util.util
-import util.plots
-import util.data
+from fast_deepsets.util import util
+from fast_deepsets.util import plots
+from fast_deepsets.util.terminal_colors import tcols
 from . import flops
 from util.terminal_colors import tcols
 
@@ -25,36 +25,23 @@ from util.terminal_colors import tcols
 
 
 def main(args):
-    util.util.device_info()
-    seed = args["const_seed"]
-    if args["kfolds"]:
-        kfold_root_dir = args["model_dir"]
-        args["model_dir"] = get_kfolded_models(args["model_dir"])
+    util.device_info()
+    model_dirs = glob.glob(os.path.join(args["root_dir"], "*kfold*"))
+    plots_dir = util.make_output_directories(args["root_dir"], f"plots_{args['seed']}")
 
-    plots_dir = util.util.make_output_directories(
-        args["model_dir"], f"plots_{args['const_seed']}"
-    )
-    hyperparam_dict = util.util.load_hyperparameter_files(args["model_dir"])
+    hyperparam_dict = util.load_hyperparameter_files(args["model_dir"])
 
-    if args["kfolds"]:
-        data = import_data(hyperparam_dict[0])
-        data.test_data = shuffle_constituents(data.test_data, seed)
-        kfold_metrics = {"fprs": [], "aucs": [], "fats": [], "accs": [], "loss": []}
-        for idx, hyperparams in enumerate(hyperparam_dict):
-            tprs_baseline, model_kfold_metrics = evaluate_model(
-                data, hyperparams, args["model_dir"][idx], plots_dir[idx], seed
-            )
-            for key in model_kfold_metrics.keys():
-                kfold_metrics[key].append(model_kfold_metrics[key])
+    valid_data = util.import_data(config["data_hyperparams"], train=False)
+    data.test_data = shuffle_constituents(data.test_data, seed)
+    kfold_metrics = {"fprs": [], "aucs": [], "fats": [], "accs": [], "loss": []}
+    for idx, hyperparams in enumerate(hyperparam_dict):
+        tprs_baseline, model_kfold_metrics = evaluate_model(
+            data, hyperparams, args["model_dir"][idx], plots_dir[idx], seed
+        )
+        for key in model_kfold_metrics.keys():
+            kfold_metrics[key].append(model_kfold_metrics[key])
 
         compute_average_metrics(tprs_baseline, kfold_metrics, kfold_root_dir)
-    else:
-        data = import_data(hyperparam_dict)
-        data.test_data = shuffle_constituents(data.test_data, seed)
-        _, model_metrics = evaluate_model(
-            data, hyperparam_dict, args["model_dir"], plots_dir, seed
-        )
-        util.util.nice_print_dictionary(model_metrics)
 
 
 def compute_average_metrics(tprs_baseline, kfold_metrics: dict, kfold_root_dir: str):
@@ -118,10 +105,6 @@ def save_model_weights(model_dir: str, model: keras.Model):
     print(tcols.OKGREEN + "\nSaving the model weights..." + tcols.ENDC)
     weights_file_path = os.path.join(model_dir, "model_weights.h5")
     model.save_weights(weights_file_path, save_format="h5")
-
-
-def get_kfolded_models(kfolds_folder: str):
-    return glob.glob(os.path.join(kfolds_folder, "*kfold*"))
 
 
 def run_inference(model: keras.Model, data: util.data.Data, plots_dir: list):
