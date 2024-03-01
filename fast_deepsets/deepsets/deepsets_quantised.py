@@ -40,7 +40,7 @@ class DeepSetsInvQuantised(keras.Model):
         self.rho_layers = rho_layers
         self.aggreg = aggreg
         self.quant = format_quantiser(nbits)
-        self.activ = format_qactivation(activ, nbits)
+        self.activ = format_qactivation(activ, 8)
 
         self._build_phi()
         self._build_agg()

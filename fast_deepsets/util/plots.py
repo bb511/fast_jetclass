@@ -46,7 +46,7 @@ def accuracy_vs_epochs(outdir: str, train_acc: np.ndarray, valid_acc: np.ndarray
     plt.text(
         0,
         np.max(train_acc),
-        f"Min: {np.min(valid_acc):.2e}",
+        f"Max: {np.max(valid_acc):.2e}",
         verticalalignment="top",
         horizontalalignment="left",
         color="blue",

@@ -10,7 +10,6 @@ os.environ["TF_CPP_MIN_LOG_LEVEL"] = "2"
 import numpy as np
 import tensorflow as tf
 from tensorflow import keras
-import keras.backend as K
 import sklearn
 
 # keras.utils.set_random_seed(123)
@@ -33,8 +32,6 @@ def main(args):
 
     # The data configuration should be the same for all kfolds, so take it from one.
     valid_data = util.import_data(hyperparams["data_hyperparams"], train=False)
-    valid_data.x = valid_data.x[:100]
-    valid_data.y = valid_data.y[:100]
     valid_data.shuffle_constituents(args.seed)
 
     util.nice_print_dictionary("Testing model w/ hps:", hyperparams["model_hyperparams"])
@@ -47,8 +44,32 @@ def main(args):
         for key in kfold_metrics.keys():
             kfold_metrics[key].append(model_metrics[key])
 
-
     compute_average_metrics(kfold_metrics, args.root_dir)
+
+
+def evaluate_model(data: HLS4MLData150, hyperparams: dict, model_dir: str, seed: int):
+    """Evaluate a model given its hyperparameters."""
+    model = import_model(model_dir, hyperparams)
+    plots_dir = util.make_output_directories(model_dir, f"plots_{seed}")
+
+    print(tcols.HEADER + f"\nRunning inference for {model_dir}" + tcols.ENDC)
+    y_pred = run_inference(model, data, plots_dir)
+
+    roc_metrics = plots.roc_curves(plots_dir, y_pred, data.y)
+    plots.dnn_output(plots_dir, y_pred)
+    print(tcols.OKGREEN + "\nPlotting done! \U0001F4C8\U00002728" + tcols.ENDC)
+
+    kfold_metrics = {}
+    kfold_metrics.update({"fprs": roc_metrics[0]})
+    kfold_metrics.update({"tprs": roc_metrics[1]})
+    kfold_metrics.update({"aucs": roc_metrics[2]})
+    kfold_metrics.update({"fats": roc_metrics[3]})
+    kfold_metrics.update({"accs": calculate_accuracy(y_pred, data.y)})
+    kfold_metrics.update({"loss": compute_crossent(y_pred, data.y)})
+
+    save_model_weights(model_dir, model)
+
+    return kfold_metrics
 
 
 def compute_average_metrics(kfold_metrics: dict, kfold_root_dir: str):
@@ -56,7 +77,7 @@ def compute_average_metrics(kfold_metrics: dict, kfold_root_dir: str):
     print(tcols.HEADER + "\nAVERAGE RESULTS..." + tcols.ENDC)
     outdir = util.make_output_directory(kfold_root_dir, "average_plots")
 
-     # Get an array of TPRs corresponding to the points where the FPRs were computed
+    # Get an array of TPRs corresponding to the points where the FPRs were computed
     # for a certain kfold. Arbitrarily, choose the TPRs of the 1st kfold.
     tprs_baseline = kfold_metrics["tprs"][0]
     kfold_metrics.pop("tprs")
@@ -85,31 +106,6 @@ def compute_average_metrics(kfold_metrics: dict, kfold_root_dir: str):
     print(f"Average 1/<FPR>: {inverse_fats:.3f} \u00B1 {inverse_fats_error:.3f}")
 
 
-def evaluate_model(data: HLS4MLData150, hyperparams: dict, model_dir: str, seed: int):
-    """Evaluate a model given its hyperparameters."""
-    model = import_model(model_dir, hyperparams)
-    plots_dir = util.make_output_directories(model_dir, f"plots_{seed}")
-
-    print(tcols.HEADER + f"\nRunning inference for {model_dir}" + tcols.ENDC)
-    y_pred = run_inference(model, data, plots_dir)
-
-    roc_metrics = plots.roc_curves(plots_dir, y_pred, data.y)
-    plots.dnn_output(plots_dir, y_pred)
-    print(tcols.OKGREEN + "\nPlotting done! \U0001F4C8\U00002728" + tcols.ENDC)
-
-    kfold_metrics = {}
-    kfold_metrics.update({"fprs": roc_metrics[0]})
-    kfold_metrics.update({"tprs": roc_metrics[1]})
-    kfold_metrics.update({"aucs": roc_metrics[2]})
-    kfold_metrics.update({"fats": roc_metrics[3]})
-    kfold_metrics.update({"accs": calculate_accuracy(y_pred, data.y)})
-    kfold_metrics.update({"loss": compute_crossent(y_pred, data.y)})
-
-    save_model_weights(model_dir, model)
-
-    return kfold_metrics
-
-
 def save_model_weights(model_dir: str, model: keras.Model):
     """Saves the weights of a keras model to a specified path."""
     print(tcols.OKGREEN + "\nSaving the model weights..." + tcols.ENDC)
@@ -120,6 +116,10 @@ def save_model_weights(model_dir: str, model: keras.Model):
 def run_inference(model: keras.Model, data: HLS4MLData150, plots_dir: str):
     """Computes predictions of a model and saves them to numpy files."""
     y_pred = model.predict(data.x)
+    if isinstance(model.layers[-1], keras.layers.Dense):
+        # Pass the outputs through a softmax layer if the last layer is just a dense.
+        y_pred = tf.nn.softmax(y_pred).numpy()
+
     y_pred.astype("float32").tofile(os.path.join(plots_dir, "y_pred.dat"))
 
     return y_pred

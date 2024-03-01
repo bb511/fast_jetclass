@@ -63,7 +63,8 @@ def build_model(config: dict, njets: int, input_size: tuple):
         njets, input_size, model, config["compilation_hyperparams"]
     )
     model.summary(expand_nested=True)
-    print(tcols.OKGREEN + f"Model FLOPs: " + tcols.ENDC, sum(model.flops.values()))
+    if not "nbits" in config["model_hyperparams"]:
+        print(tcols.OKGREEN + f"Model FLOPs: " + tcols.ENDC, sum(model.flops.values()))
 
     return model, model_callbacks
 

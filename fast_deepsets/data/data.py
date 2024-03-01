@@ -102,6 +102,20 @@ class HLS4MLData150(object):
 
         return 0
 
+    def _check_preprocessed_data_exists(self) -> bool:
+        """Checks if the preprocessed data exisits or needs to be re-processed."""
+        if self.root.is_dir():
+            preproc_folder = self.root / "preprocessed"
+            x_preproc_file = preproc_folder / f"x_{self.preproc_output_name}"
+            y_preproc_file = preproc_folder / f"y_{self.preproc_output_name}"
+
+            if x_preproc_file.is_file() and y_preproc_file.is_file():
+                self.x_preprocessed = np.load(x_preproc_file)
+                self.y_preprocessed = np.load(y_preproc_file)
+                return 1
+
+        return 0
+
     def _check_processed_data_exists(self) -> bool:
         """Checks if the processed data exisits or needs to be re-processed."""
         if self.root.is_dir():
@@ -112,20 +126,6 @@ class HLS4MLData150(object):
             if x_proc_file.is_file() and y_proc_file.is_file():
                 self.x = np.load(x_proc_file)
                 self.y = np.load(y_proc_file)
-                return 1
-
-        return 0
-
-    def _check_preprocessed_data_exists(self) -> bool:
-        """Checks if the preprocessed data exisits or needs to be re-processed."""
-        if self.root.is_dir():
-            proc_folder = self.root / "processed"
-            x_preproc_file = proc_folder / f"x_preproc_{self.preproc_output_name}"
-            y_preproc_file = proc_folder / f"y_preproc_{self.preproc_output_name}"
-
-            if x_preproc_file.is_file() and y_preproc_file.is_file():
-                self.x_preprocessed = np.load(x_preproc_file)
-                self.y_preprocessed = np.load(y_preproc_file)
                 return 1
 
         return 0
@@ -179,11 +179,11 @@ class HLS4MLData150(object):
         self._cut_transverse_momentum()
         self._restrict_nb_constituents()
 
-        proc_dir = self.root / "processed"
-        if not proc_dir.is_dir():
-            os.makedirs(proc_dir)
-        np.save(proc_dir / f"x_preproc_{self.preproc_output_name}", self.x_preprocessed)
-        np.save(proc_dir / f"y_preproc_{self.preproc_output_name}", self.y_preprocessed)
+        preproc_dir = self.root / "preprocessed"
+        if not preproc_dir.is_dir():
+            os.makedirs(preproc_dir)
+        np.save(preproc_dir / f"x_{self.preproc_output_name}", self.x_preprocessed)
+        np.save(preproc_dir / f"y_{self.preproc_output_name}", self.y_preprocessed)
 
     def _process_data(self):
         """Processes the already processed data.
@@ -236,7 +236,7 @@ class HLS4MLData150(object):
                 print("Need for normalisation of the validation data.")
                 exit(1)
 
-            return standardization.fit_standardisation(self.norm, x_data_train)
+            return standardization.fit_standardisation(self.norm, self.x)
 
         return standardization.fit_standardisation(self.norm, self.x)
 
