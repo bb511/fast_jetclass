@@ -70,13 +70,14 @@ def build_model(config: dict, njets: int, input_size: tuple):
 
 
 def train_and_save(
-        model: keras.Model,
-        model_callbacks: list,
-        train_data: tuple,
-        valid_data: tuple,
-        hps: dict,
-        outdir: str
-    ):
+    model: keras.Model,
+    model_callbacks: list,
+    train_data: tuple,
+    valid_data: tuple,
+    hps: dict,
+    outdir: str
+):
+    """Run keras training and save model at the end."""
     history = model.fit(
         x=train_data[0],
         y=train_data[1],

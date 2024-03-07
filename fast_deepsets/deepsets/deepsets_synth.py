@@ -17,7 +17,7 @@ def deepsets_invariant_synth(
     output_dim: int = 5,
     activ: str = "relu",
     aggreg: str =  "mean",
-    aggreg_precision: dict,
+    aggreg_precision: dict = {"bits": 20, "integer": 10},
     nbits: int = 8
 ):
     """Deep sets permutation invariant graph network https://arxiv.org/abs/1703.06114.
@@ -35,6 +35,8 @@ def deepsets_invariant_synth(
         nbits: Number of bits to quantise the weights of the model to.
     """
     quant = format_quantiser(nbits)
+    # Activation precision is fixed to 8. Decreasing this precision would have severe
+    # impacts on the performance of the model.
     activ = format_qactivation(activ, 8)
 
     deepsets_input = keras.Input(shape=input_size, name="input_layer")
