@@ -76,7 +76,7 @@ def save_hyperparameters_file(hyperparams: dict, outdir: str):
 
 
 def save_flops_file(flops: dict, outdir: str):
-    """Saves the flops dictionary to file inside outdir."""
+    """Saves the flops dictionary to file inside given outdir."""
     flops_file_path = os.path.join(outdir, "flops.json")
     with open(flops_file_path, "w") as file:
         json.dump(flops, file)

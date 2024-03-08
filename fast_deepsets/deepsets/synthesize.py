@@ -116,7 +116,10 @@ def run_inference(model: keras.Model, data: HLS4MLData150):
 
 
 def profile_model(model: keras.Model, hls_model: hls4ml.model, data: np.ndarray, outdir):
-    """Profile the hls4ml model to see if it loses performance and if yes, where."""
+    """Profile the hls4ml model to see the bit width of every layer.
+
+    The plots in this function show the distribution of weights in the network.
+    """
     fig1, fig2, fig3, fig4 = hls4ml.model.profiling.numerical(
         model=model, hls_model=hls_model, X=data[:5000]
     )
@@ -134,7 +137,14 @@ def profile_model(model: keras.Model, hls_model: hls4ml.model, data: np.ndarray,
 
 
 def run_trace(model: keras.Model, hls_model: hls4ml.model, data: np.ndarray, outdir):
-    """Shows output of every layer given a certain sample."""
+    """Shows output of every layer given a certain sample.
+
+    This is used to compute the outputs in every layer for the hls4ml firmware model
+    against the qkeras model. The outputs of the quantized layers is not quantized
+    itself in the QKERAS model but it is in hls4ml. A big difference in outputs is
+    indicative that the precision of these outputs should be set higher manually
+    in hls4ml.
+    """
     sample_numbers = [0, 49, 99]
     hls4ml_pred, hls4ml_trace = hls_model.trace(data[:100])
     keras_trace = hls4ml.model.profiling.get_ymodel_keras(model, data[:100])

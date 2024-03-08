@@ -1,12 +1,12 @@
-# Implementation of the permutation equivariant Deep Sets network from the
-# https://arxiv.org/abs/1703.06114 paper.
+# Implementation of a simple MLP.
 
 import numpy as np
 
 import tensorflow as tf
 from tensorflow import keras
 import tensorflow.keras.layers as KL
-import qkeras
+
+from fast_deepsets.util import flops
 
 
 class MLP(keras.Model):
@@ -18,24 +18,41 @@ class MLP(keras.Model):
         activ: Activation function to use between the dense layers.
     """
 
-    def __init__(self, layers: list, activ: str = "relu", **kwargs):
+    def __init__(
+        self,
+        input_size: tuple,
+        layers: list,
+        activ: str = "relu",
+        output_dim: int = 5,
+    ):
         super(MLP, self).__init__(name="MLP")
-        self.nclasses = 5
+        self.input_size = input_size
+        self.mlp_layers = layers
+        self.activ = activ
+        self.output_dim = output_dim
+        self.flops = {"layer": 0, "activation": 0}
 
+        self._build_mlp()
+
+    def _build_mlp(self):
+        input_shape = list(self.input_size[1:])
         self.mlp = keras.Sequential()
-        for layer_nodes in layers:
+        for layer_nodes in self.mlp_layers:
             self.mlp.add(KL.Dense(layer_nodes))
-            self.mlp.add(KL.Activation(activ))
+            self.flops["layer"] += flops.get_flops_dense(input_shape, layer_nodes)
+            self.mlp.add(KL.Activation(self.activ))
+            self.flops["activation"] += flops.get_flops_activ(input_shape, self.activ)
 
-        self.mlp.add(KL.Dense(self.nclasses))
+        self.mlp.add(KL.Dense(self.output_dim))
+        self.flops["layer"] += flops.get_flops_dense(input_shape, self.output_dim)
 
-    def call(self, inputs: np.ndarray, **kwargs):
+    def call(self, inputs: np.ndarray):
         inputs = KL.Flatten()(inputs)
         return self.mlp(inputs)
 
 
 class MLPRegular(keras.Model):
-    """Same as above, but this time with regularisation, L1 and Dropout.
+    """Same as above, but this time with L1 regularisation.
 
     Attributes:
         layers: List, where each element represents the number of nodes in a certain
@@ -44,27 +61,40 @@ class MLPRegular(keras.Model):
         kwargs: Regularisation parameters.
     """
 
-    def __init__(self, layers: list, activ: str = "relu", **kwargs):
+    def __init__(
+        self,
+        input_size: tuple,
+        layers: list,
+        activ: str = "relu",
+        output_dim: int = 5,
+        **kwargs
+    ):
         super(MLPRegular, self).__init__(name="MLPRegularised")
-        self.nclasses = 5
+        self.input_size = input_size
+        self.mlp_layers = layers
+        self.activ = activ
+        self.output_dim = output_dim
+        self.flops = {"layer": 0, "activation": 0}
 
+        self._build_mlp(**kwargs)
+
+    def _build_mlp(self, **kwargs):
+        input_shape = list(self.input_size[1:])
         self.mlp = keras.Sequential()
-        for layer_nodes in layers:
-            if "l1_coeff" in kwargs:
-                self.mlp.add(
-                    KL.Dense(
-                        layer_nodes,
-                        kernel_regularizer=keras.regularizers.L1(kwargs["l1_coeff"]),
-                    )
+        for layer_nodes in self.mlp_layers:
+            self.mlp.add(
+                KL.Dense(
+                    layer_nodes,
+                    kernel_regularizer=keras.regularizers.L1(kwargs["l1_coeff"]),
                 )
-            else:
-                self.mlp.add(KL.Dense(layer_nodes))
-            if "dropout_rate" in kwargs:
-                self.mlp.add(KL.Dropout(kwargs["dropout_rate"]))
-            self.mlp.add(KL.Activation(activ))
+            )
+            self.flops["layer"] += flops.get_flops_dense(input_shape, layer_nodes)
+            self.mlp.add(KL.Activation(self.activ))
+            self.flops["activation"] += flops.get_flops_activ(input_shape, self.activ)
 
-        self.mlp.add(KL.Dense(self.nclasses))
+        self.mlp.add(KL.Dense(self.output_dim))
+        self.flops["layer"] += flops.get_flops_dense(input_shape, self.output_dim)
 
-    def call(self, inputs: np.ndarray, **kwargs):
+    def call(self, inputs: np.ndarray):
         inputs = KL.Flatten()(inputs)
         return self.mlp(inputs)

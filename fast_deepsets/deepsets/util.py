@@ -19,12 +19,8 @@ def choose_deepsets(deepsets_type: str, model_hyperparams: dict) -> keras.models
     """Construct a deepsets keras model, ready for training, and returns it.
 
     Args:
-        deepsets_type: String specifying the type of deepsets, e.g., invariant.
-        train_njets: Number of training samples in the given jet data set.
-        nconst: The number of constituents of each jet in the mentioned data set.
-        nfeats: The number of features of each aforementioned constiutents.
+        deepsets_type: String specifying the type of deepsets, e.g., quantised or not.
         model_hyperparams: Hyperparameters concerning the architecture of the model.
-        compilation_hyperparams: Hyperparameters concerning the compilation of a full
             trainable model object in keras, including the optimizer.
     """
     for key in model_hyperparams:
@@ -33,7 +29,7 @@ def choose_deepsets(deepsets_type: str, model_hyperparams: dict) -> keras.models
     switcher = {
         "invariant": lambda: DeepSetsInv(**model_hyperparams),
         "qinvariant": lambda: DeepSetsInvQuantised(**model_hyperparams),
-        "qsinvariant": lambda: deepsets_invariant_synth(**model_hyperparams),
+        "sinvariant": lambda: deepsets_invariant_synth(**model_hyperparams),
     }
     model = switcher.get(deepsets_type, lambda: None)()
 

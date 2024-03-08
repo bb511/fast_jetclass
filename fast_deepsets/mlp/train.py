@@ -1,112 +1,100 @@
-# Training of the model defined in the model.py file.
+# Definition of the training procedure for the deepsets network.
 
 import os
 import numpy as np
 
-# Silence the info from tensorflow in which it brags that it can run on cpu nicely.
-os.environ["TF_CPP_MIN_LOG_LEVEL"] = "2"
 import tensorflow as tf
 from tensorflow import keras
 from tensorflow_model_optimization.python.core.sparsity.keras import pruning_callbacks
 
+# Set keras seed for reproducibility.
 # keras.utils.set_random_seed(123)
 
 import absl.logging
 
 absl.logging.set_verbosity(absl.logging.ERROR)
 
-import util.util
-import util.plots
-import util.data
-from util.terminal_colors import tcols
-from . import util as dsutil
+from fast_deepsets.util import util
+from fast_deepsets.util import plots
+from fast_deepsets.util.terminal_colors import tcols
+from fast_deepsets.mlp import util as mlputil
+from fast_deepsets.data.data import HLS4MLData150
 
 # Set keras float precision. Default is float32.
 # tf.keras.backend.set_floatx("float64")
 
 
-def main(args):
-    util.util.device_info()
-    outdir = util.util.make_output_directory("trained_mlps", args["outdir"])
-    util.util.save_hyperparameters_file(args, outdir)
+def main(config: dict):
+    util.device_info()
+    outdir = util.make_output_directory("trained_mlps", config["outdir"])
+    util.save_hyperparameters_file(config, outdir)
 
-    data = util.data.Data.load_kfolds(**args["data_hyperparams"])
-    model = build_model(args, data)
-    history = train_model(model, data, args)
+    train_data = util.import_data(config["data_hyperparams"], train=True)
+    batch_size = config["training_hyperparams"]["batch_size"]
+    input_size = (batch_size, train_data.nconst, train_data.nfeats)
 
+    model, model_callbacks = build_model(config, train_data.njets, input_size)
+    initial_weights = model.get_weights()
+
+    util.print_training_attributes(model, config["training_hyperparams"])
+    for kfold, (train_idx, valid_idx) in enumerate(train_data.kfolds):
+        print(tcols.HEADER + f"\nTRAINING kfolding {kfold + 1} \U0001F4AA" + tcols.ENDC)
+        train_kfolds = (train_data.x[train_idx], train_data.y[train_idx])
+        valid_kfolds = (train_data.x[valid_idx], train_data.y[valid_idx])
+        outdir_kfold = util.make_output_directory(outdir, f"kfolding{kfold + 1}")
+        train_and_save(
+            model,
+            model_callbacks,
+            train_kfolds,
+            valid_kfolds,
+            config["training_hyperparams"],
+            outdir_kfold
+        )
+        model.set_weights(initial_weights)
+        tf.keras.backend.clear_session()
+
+
+def build_model(config: dict, njets: int, input_size: tuple):
+    """Instantiate the model with chosen hyperparams and return it."""
+    print(tcols.HEADER + "\n\nINSTANTIATING MODEL:" + tcols.ENDC)
+    config["model_hyperparams"].update({"input_size": input_size})
+    model = mlputil.choose_mlp(config["model_type"], config["model_hyperparams"])
+    model, model_callbacks = mlputil.compile_mlp(
+        njets, input_size, model, config["compilation_hyperparams"]
+    )
+    model.summary(expand_nested=True)
+    if not "nbits" in config["model_hyperparams"]:
+        print(tcols.OKGREEN + f"Model FLOPs: " + tcols.ENDC, sum(model.flops.values()))
+
+    return model, model_callbacks
+
+
+def train_and_save(
+    model: keras.Model,
+    model_callbacks: list,
+    train_data: tuple,
+    valid_data: tuple,
+    hps: dict,
+    outdir: str
+):
+    """Run keras training and save model at the end."""
+    history = model.fit(
+        x=train_data[0],
+        y=train_data[1],
+        callbacks=model_callbacks,
+        validation_data=valid_data,
+        **hps
+    )
     print(tcols.OKGREEN + "\n\n\nSAVING MODEL TO: " + tcols.ENDC, outdir)
     model.save(outdir, save_format="tf")
     plot_model_performance(history.history, outdir)
 
 
-def build_model(args: dict, data: util.data.Data):
-    """Instantiate the model with chosen hyperparams and return it."""
-    print(tcols.HEADER + "\n\nINSTANTIATING MODEL" + tcols.ENDC)
-
-    model = dsutil.choose_mlp(
-        args["mlp_type"],
-        data.ntrain_jets,
-        data.ncons,
-        data.nfeat,
-        args["model_hyperparams"],
-        args["compilation"],
-        args["training_hyperparams"],
-    )
-    model.summary(expand_nested=True)
-    for layer in model.layers:
-        if hasattr(layer, "kernel_quantizer"):
-            print(
-                layer.name,
-                "kernel:",
-                str(layer.kernel_quantizer_internal),
-                "bias:",
-                str(layer.bias_quantizer_internal),
-            )
-        elif hasattr(layer, "quantizer"):
-            print(layer.name, "quantizer:", str(layer.quantizer))
-
-    return model
-
-
-def train_model(model, data, args: dict):
-    """Fit the model to the data."""
-    print(tcols.HEADER + "\n\nTRAINING THE MODEL \U0001F4AA" + tcols.ENDC)
-    dsutil.print_training_attributes(model, args)
-
-    history = model.fit(
-        data.train_data,
-        data.train_target,
-        epochs=args["training_hyperparams"]["epochs"],
-        batch_size=args["training_hyperparams"]["batch"],
-        verbose=2,
-        callbacks=get_tensorflow_callbacks(args),
-        validation_data=(data.test_data, data.test_target),
-        shuffle=True,
-    )
-
-    return history
-
-
 def plot_model_performance(history: dict, outdir: str):
     """Does different plots that show the performance of the trained model."""
-    util.plots.loss_vs_epochs(outdir, history["loss"], history["val_loss"])
-    util.plots.accuracy_vs_epochs(
+    plots.loss_vs_epochs(outdir, history["loss"], history["val_loss"])
+    plots.accuracy_vs_epochs(
         outdir,
         history["categorical_accuracy"],
         history["val_categorical_accuracy"],
     )
-
-
-def get_tensorflow_callbacks(args: dict):
-    """Prepare the callbacks for the training."""
-    early_stopping = keras.callbacks.EarlyStopping(
-        monitor="val_categorical_accuracy", patience=20
-    )
-    learning = keras.callbacks.ReduceLROnPlateau(
-        monitor="val_categorical_accuracy", factor=0.8, patience=10, min_lr=0.0001
-    )
-    if args["training_hyperparams"]["pruning_rate"] > 0:
-        pruning = pruning_callbacks.UpdatePruningStep()
-        return [early_stopping, learning, pruning]
-
-    return [early_stopping, learning]

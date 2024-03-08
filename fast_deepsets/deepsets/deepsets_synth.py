@@ -10,7 +10,6 @@ import qkeras
 
 
 def deepsets_invariant_synth(
-    self,
     input_size: tuple,
     phi_layers: list = [32, 32, 32],
     rho_layers: list = [16],
@@ -39,11 +38,11 @@ def deepsets_invariant_synth(
     # impacts on the performance of the model.
     activ = format_qactivation(activ, 8)
 
-    deepsets_input = keras.Input(shape=input_size, name="input_layer")
+    deepsets_input = keras.Input(shape=input_size[1:], name="input_layer")
 
     # Phi network.
     x = qkeras.QDense(
-            layer, kernel_quantizer=quant, bias_quantizer=quant, name=f"phi{1}"
+            phi_layers[0], kernel_quantizer=quant, bias_quantizer=quant, name=f"phi{1}"
         )(deepsets_input)
     x = qkeras.QActivation(activ)(x)
     for i, layer in enumerate(phi_layers[1:]):
@@ -56,6 +55,7 @@ def deepsets_invariant_synth(
     x = qkeras.QActivation(
             qkeras.quantized_bits(**aggreg_precision, symmetric=0, keep_negative=1)
         )(x)
+
     # Aggregator
     agg = choose_aggregator(aggreg)
     x = agg(x)

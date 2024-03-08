@@ -1,4 +1,4 @@
-# Quantised deepsets networks equivalent to the float32 implementations in deepsets.py.
+# Implementation of a simple MLP.
 
 import numpy as np
 
@@ -7,9 +7,11 @@ from tensorflow import keras
 import tensorflow.keras.layers as KL
 import qkeras
 
+from fast_deepsets.util import flops
+
 
 class MLPRegularQuantised(keras.Model):
-    """Quantised weights MLP with regularisation..
+    """Same as above, but this time with L1 regularisation.
 
     Attributes:
         layers: List, where each element represents the number of nodes in a certain
@@ -17,38 +19,42 @@ class MLPRegularQuantised(keras.Model):
         activ: Activation function to use between the dense layers.
         kwargs: Regularisation parameters.
     """
+    def __init__(
+        self,
+        input_size: tuple,
+        layers: list,
+        activ: str = "relu",
+        output_dim: int = 5,
+        nbits: int = 8,
+        **kwargs
+    ):
+        super(MLPRegularQuantised, self).__init__(name="MLPRegularisedQuantised")
+        self.input_size = input_size
+        self.mlp_layers = layers
+        self.activ = activ
+        self.output_dim = output_dim
+        self.quant = format_quantiser(nbits)
+        self.activ = format_qactivation(activ, 8)
 
-    def __init__(self, layers: list, activ: str = "relu", nbits: int = 8, **kwargs):
-        super(MLPRegularQuantised, self).__init__(name="MLPRegularQuantised")
-        self.nclasses = 5
+        self._build_mlp(**kwargs)
 
-        quantizer = format_quantiser(nbits)
-        activ = format_qactivation(activ, nbits)
-
+    def _build_mlp(self, **kwargs):
+        input_shape = list(self.input_size[1:])
         self.mlp = keras.Sequential()
-        for layer_nodes in layers:
-            if "l1_coeff" in kwargs:
-                self.mlp.add(
-                    qkeras.QDense(
-                        layer_nodes,
-                        kernel_regularizer=keras.regularizers.L1(kwargs["l1_coeff"]),
-                        bias_quantizer=quantizer,
-                        kernel_quantizer=quantizer,
-                    )
+        for layer_nodes in self.mlp_layers:
+            self.mlp.add(
+                qkeras.QDense(
+                    layer_nodes,
+                    kernel_regularizer=keras.regularizers.L1(kwargs["l1_coeff"]),
+                    bias_quantizer=self.quant,
+                    kernel_quantizer=self.quant,
                 )
-            else:
-                self.mlp.add(
-                    qkeras.QDense(
-                        layer_nodes,
-                        bias_quantizer=quantizer,
-                        kernel_quantizer=quantizer,
-                    )
-                )
-            self.mlp.add(qkeras.QActivation(activ))
+            )
+            self.mlp.add(qkeras.QActivation(self.activ))
 
-        self.mlp.add(KL.Dense(self.nclasses))
+        self.mlp.add(KL.Dense(self.output_dim))
 
-    def call(self, inputs: np.ndarray, **kwargs):
+    def call(self, inputs: np.ndarray):
         inputs = KL.Flatten()(inputs)
         return self.mlp(inputs)
 
