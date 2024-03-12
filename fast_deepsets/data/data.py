@@ -206,6 +206,8 @@ class HLS4MLData150(object):
             self.shuffle_constituents(self.seed)
         self._plot_data()
 
+        if not proc_folder.is_dir():
+            os.makedirs(proc_folder)
         proc_folder = self.root / "processed"
         np.save(proc_folder / f"x_{self.proc_output_name}", self.x)
         np.save(proc_folder / f"y_{self.proc_output_name}", self.y)

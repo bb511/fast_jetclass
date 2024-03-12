@@ -2,6 +2,7 @@
 
 # Run the testing of the interaction network.
 import argparse
+import yaml
 import os
 
 from fast_deepsets.deepsets.synthesize import main

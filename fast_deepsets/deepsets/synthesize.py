@@ -20,9 +20,8 @@ from fast_deepsets.util.terminal_colors import tcols
 from fast_deepsets.data.data import HLS4MLData150
 
 
-def main(args, synthesis_config: dict):
+def main(args, synth_config: dict):
     util.device_info()
-    plots_dir = util.make_output_directories(args.model_dir, f"plots_{seed}")
     synthesis_dir = util.make_output_directories(args.model_dir, "synthesis")
 
     print(tcols.OKGREEN + "\nIMPORTING DATA AND MODEL\n" + tcols.ENDC)
@@ -30,11 +29,11 @@ def main(args, synthesis_config: dict):
     hyperparams = util.load_hyperparameter_file(root_dir)
     valid_data = util.import_data(hyperparams["data_hyperparams"], train=False)
     valid_data.shuffle_constituents(args.seed)
-    model = import_model(model_dir, hyperparams)
+    model = import_model(args.model_dir, hyperparams)
 
     print(tcols.OKGREEN + "\nCONFIGURING SYNTHESIS\n" + tcols.ENDC)
-    config = hls4ml.utils.config_from_keras_model(model, granularity="name")
-    config.update(synthesis_config)
+    synth_config = hls4ml.utils.config_from_keras_model(model, granularity="name")
+    synth_config.update(synth_config)
 
     model_activations = get_model_activations(model)
     # Set the model activation function rounding and saturation modes.
@@ -45,12 +44,13 @@ def main(args, synthesis_config: dict):
     )
 
     if args.diagnose:
-        for layer in config["LayerName"].keys():
-            config["LayerName"][layer]["Trace"] = True
+        for layer in synth_config["LayerName"].keys():
+            synth_config["LayerName"][layer]["Trace"] = True
 
+    print(synth_config)
     hls_model = hls4ml.converters.convert_from_keras_model(
         model,
-        hls_config=config,
+        hls_config=synth_config,
         output_dir=synthesis_dir,
         part="xcvu13p-flga2577-2-e",
         io_type="io_parallel",
@@ -64,10 +64,10 @@ def main(args, synthesis_config: dict):
     hls_model.write()
 
     print(tcols.OKGREEN + "\nTESTING MODEL PERFORMANCE\n" + tcols.ENDC)
-    print(tcols.HEADER + f"\nRunning inference for {model_dir}" + tcols.ENDC)
-    y_pred = run_inference(model, data)
+    print(tcols.HEADER + f"\nRunning inference for {args.model_dir}" + tcols.ENDC)
+    y_pred = run_inference(model, valid_data)
     acc = calculate_accuracy(y_pred, valid_data.x)
-    y_pred = run_inference(hls_model, data)
+    y_pred = run_inference(hls_model, valid_data)
     acc_synth = calculate_accuracy(y_pred, valid_data.x)
     print(f"Accuracy model: {acc:.3f}")
     print(f"Accuracy synthed model: {acc_synth:.3f}")
