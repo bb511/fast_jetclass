@@ -25,7 +25,7 @@ def main(args, synth_config: dict):
     synthesis_dir = util.make_output_directories(args.model_dir, "synthesis")
 
     print(tcols.OKGREEN + "\nIMPORTING DATA AND MODEL\n" + tcols.ENDC)
-    root_dir = os.path.dirname(args.model_dir)
+    root_dir = os.path.dirname(os.path.abspath(args.model_dir))
     hyperparams = util.load_hyperparameter_file(root_dir)
     valid_data = util.import_data(hyperparams["data_hyperparams"], train=False)
     valid_data.shuffle_constituents(args.seed)
@@ -66,9 +66,9 @@ def main(args, synth_config: dict):
     print(tcols.OKGREEN + "\nTESTING MODEL PERFORMANCE\n" + tcols.ENDC)
     print(tcols.HEADER + f"\nRunning inference for {args.model_dir}" + tcols.ENDC)
     y_pred = run_inference(model, valid_data)
-    acc = calculate_accuracy(y_pred, valid_data.x)
-    y_pred = run_inference(hls_model, valid_data)
-    acc_synth = calculate_accuracy(y_pred, valid_data.x)
+    acc = calculate_accuracy(y_pred, valid_data.y)
+    y_pred = hls_model.predict(valid_data.x)
+    acc_synth = calculate_accuracy(y_pred, valid_data.y)
     print(f"Accuracy model: {acc:.3f}")
     print(f"Accuracy synthed model: {acc_synth:.3f}")
     print(f"Accuracy ratio: {acc_synth/acc:.3f}")
@@ -98,7 +98,7 @@ def import_model(model_dir: str, hyperparams: dict):
 
 
 def calculate_accuracy(y_pred: np.ndarray, y_true: np.ndarray):
-    """Computes accuracy for a model's predictions."""
+    """Computes accuracy for a model's predictions, given the true labels y_true."""
     acc = keras.metrics.CategoricalAccuracy()
     acc.update_state(y_true, y_pred)
 
@@ -145,9 +145,14 @@ def run_trace(model: keras.Model, hls_model: hls4ml.model, data: np.ndarray, out
     indicative that the precision of these outputs should be set higher manually
     in hls4ml.
     """
+    # Show the weights of the network only for 3 of the samples, as defined below.
     sample_numbers = [0, 49, 99]
+
+    # Take just the first 100 events of the data set.
     hls4ml_pred, hls4ml_trace = hls_model.trace(data[:100])
     keras_trace = hls4ml.model.profiling.get_ymodel_keras(model, data[:100])
+
+    # Write the weights of the hls4ml and qkeras networks for the 3 specified samples.
     trace_file_path = os.path.join(outdir, "trace_output.log")
     with open(trace_file_path, "w") as trace_file:
         for sample_number in samples:
