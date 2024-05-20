@@ -20,7 +20,7 @@ from fast_deepsets.util.terminal_colors import tcols
 from fast_deepsets.data.data import HLS4MLData150
 
 
-def main(args, synth_config: dict):
+def main(args, synth_config_user: dict): # changed from `synth_config` to `synth_config_user` as it is the user input config
     util.device_info()
     synthesis_dir = util.make_output_directories(args.model_dir, "synthesis")
 
@@ -33,7 +33,14 @@ def main(args, synth_config: dict):
 
     print(tcols.OKGREEN + "\nCONFIGURING SYNTHESIS\n" + tcols.ENDC)
     synth_config = hls4ml.utils.config_from_keras_model(model, granularity="name")
-    synth_config.update(synth_config)
+    # synth_config.update(synth_config) # Commented out, as it overwrites entirely
+
+    # Updated here
+    synth_config["Model"].update(synth_config_user["Model"]) # Update the model
+
+    for layer in synth_config["LayerName"].keys(): # Update each layer
+        if layer in synth_config_user["LayerName"].keys(): 
+            synth_config["LayerName"][layer].update(synth_config_user["LayerName"][layer])    
 
     model_activations = get_model_activations(model)
     # Set the model activation function rounding and saturation modes.
