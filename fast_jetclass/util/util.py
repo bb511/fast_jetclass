@@ -9,7 +9,7 @@ import tensorflow as tf
 from tensorflow import keras
 
 from .terminal_colors import tcols
-from fast_deepsets.data import data
+from fast_jetclass.data import data
 
 
 def make_output_directories(locations: list, outdir: str):

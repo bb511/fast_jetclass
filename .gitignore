@@ -6,7 +6,7 @@ logs/
 /data/
 *.logs
 *.out
-
+/.sublime
 
 # PYTHON IGNORES
 

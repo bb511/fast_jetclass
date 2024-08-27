@@ -3,7 +3,7 @@
 import numpy as np
 from sklearn.preprocessing import RobustScaler
 
-from fast_deepsets.util.terminal_colors import tcols
+from fast_jetclass.util.terminal_colors import tcols
 
 
 def apply_standardisation(choice: str, x_data: np.ndarray, norm_params: dict):

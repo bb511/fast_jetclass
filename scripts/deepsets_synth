@@ -5,13 +5,13 @@ import argparse
 import yaml
 import os
 
-from fast_deepsets.deepsets.synthesize import main
+from fast_jetclass.deepsets.synthesize import main
 
 
 parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
 parser.add_argument("--config_file", type=str, help="HLS4ML synthesis config.")
 parser.add_argument("--model_dir", type=str, help="Directory with model to synth.")
-parser.add_argument("--diagnose", type=bool, help="Run model diagnostic output.")
+parser.add_argument('--diagnose', action=argparse.BooleanOptionalAction)
 parser.add_argument("--gpu", type=str, default="0")
 parser.add_argument("--seed", type=int, default=123, help="Seed for shuffling const.")
 args = parser.parse_args()

@@ -4,7 +4,7 @@
 import argparse
 import os
 
-from fast_deepsets.deepsets.test import main
+from fast_jetclass.deepsets.test import main
 
 
 parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)

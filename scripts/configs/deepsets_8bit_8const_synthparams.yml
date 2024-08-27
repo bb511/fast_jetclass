@@ -7,16 +7,16 @@ LayerName:
     Precision: "ap_fixed<12, 4, AP_RND, AP_SAT>"
   phi1:
     ParallelizationFactor: 1
-    ReuseFactor: 8
+    ReuseFactor: 2
     Strategy: "Latency"
     ConvImplementation: "Pointwise"
   phi2:
     ParallelizationFactor: 1
-    ReuseFactor: 8
+    ReuseFactor: 2
     Strategy: "Latency"
     ConvImplementation: "Pointwise"
   phi3:
     ParallelizationFactor: 1
-    ReuseFactor: 8
+    ReuseFactor: 2
     Strategy: "Latency"
     ConvImplementation: "Pointwise"

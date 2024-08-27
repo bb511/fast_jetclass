@@ -5,7 +5,7 @@ import operator
 import numpy as np
 import matplotlib.pyplot as plt
 
-from fast_deepsets.util.terminal_colors import tcols
+from fast_jetclass.util.terminal_colors import tcols
 
 
 def select_feature_labels(choice: str) -> list[str]:

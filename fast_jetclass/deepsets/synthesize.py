@@ -1,6 +1,12 @@
 # Script that synthesizes a given deepsets model and then returns the performance
 # performance metrics for the synthesis.
+import sys
+import io
 import os
+import collections.abc
+import json
+import contextlib
+
 import numpy as np
 import tensorflow as tf
 import hls4ml
@@ -14,10 +20,10 @@ import qkeras
 from tensorflow import keras
 import tensorflow.keras.layers as KL
 
-from fast_deepsets.util import util
-from fast_deepsets.util import plots
-from fast_deepsets.util.terminal_colors import tcols
-from fast_deepsets.data.data import HLS4MLData150
+from fast_jetclass.util import util
+from fast_jetclass.util import plots
+from fast_jetclass.util.terminal_colors import tcols
+from fast_jetclass.data.data import HLS4MLData150
 
 
 def main(args, synth_config: dict):
@@ -28,12 +34,14 @@ def main(args, synth_config: dict):
     root_dir = os.path.dirname(os.path.abspath(args.model_dir))
     hyperparams = util.load_hyperparameter_file(root_dir)
     valid_data = util.import_data(hyperparams["data_hyperparams"], train=False)
+    valid_data.x = valid_data.x[:6000]
+    valid_data.y = valid_data.y[:6000]
     valid_data.shuffle_constituents(args.seed)
     model = import_model(args.model_dir, hyperparams)
 
     print(tcols.OKGREEN + "\nCONFIGURING SYNTHESIS\n" + tcols.ENDC)
-    synth_config = hls4ml.utils.config_from_keras_model(model, granularity="name")
-    synth_config.update(synth_config)
+    hls4ml_config = hls4ml.utils.config_from_keras_model(model, granularity='name')
+    deep_dict_update(hls4ml_config, synth_config)
 
     model_activations = get_model_activations(model)
     # Set the model activation function rounding and saturation modes.
@@ -44,13 +52,15 @@ def main(args, synth_config: dict):
     )
 
     if args.diagnose:
-        for layer in synth_config["LayerName"].keys():
-            synth_config["LayerName"][layer]["Trace"] = True
+        for layer in hls4ml_config["LayerName"].keys():
+            hls4ml_config["LayerName"][layer]["Trace"] = True
 
-    print(synth_config)
+    print(tcols.HEADER + "Configuration for hls4ml: " + tcols.ENDC)
+    print(json.dumps(hls4ml_config, indent=4, sort_keys=True))
     hls_model = hls4ml.converters.convert_from_keras_model(
         model,
-        hls_config=synth_config,
+        project_name='deepsets_synthesis',
+        hls_config=hls4ml_config,
         output_dir=synthesis_dir,
         part="xcvu13p-flga2577-2-e",
         io_type="io_parallel",
@@ -58,8 +68,8 @@ def main(args, synth_config: dict):
 
     hls_model.compile()
     if args.diagnose:
-        print(tcols.OKGREEN + "\nRUNNING MODEL DIAGNOSTICS\n" + tcols.ENDC)
-        run_trace(model, hls_model, valid_data.x)
+        print(tcols.OKGREEN + "\nRUNNING MODEL DIAGNOSTICS" + tcols.ENDC)
+        run_trace(model, hls_model, valid_data.x, synthesis_dir)
         profile_model(model, hls_model, valid_data.x, synthesis_dir)
     hls_model.write()
 
@@ -76,8 +86,8 @@ def main(args, synth_config: dict):
 
 def import_model(model_dir: str, hyperparams: dict):
     """Imports the model from a specified path. Model is saved in tf format."""
-    print(tcols.HEADER + "Importing the model..." + tcols.ENDC)
-    util.nice_print_dictionary("DS hps:", hyperparams["model_hyperparams"])
+    print(tcols.HEADER + "\n\nDeepSets hyperparams and architecture: " + tcols.ENDC)
+    print(json.dumps(hyperparams['model_hyperparams'], indent=4, sort_keys=True))
     model = keras.models.load_model(
         model_dir,
         compile=False,
@@ -155,14 +165,14 @@ def run_trace(model: keras.Model, hls_model: hls4ml.model, data: np.ndarray, out
     # Write the weights of the hls4ml and qkeras networks for the 3 specified samples.
     trace_file_path = os.path.join(outdir, "trace_output.log")
     with open(trace_file_path, "w") as trace_file:
-        for sample_number in samples:
+        for sample_number in sample_numbers:
             for layer in model.layers:
                 if layer.name == "input_layer":
                     continue
                 trace_file.write(f"Layer output HLS4ML for {layer.name}")
-                trace_file.write(hls4ml_trace[layer.name][sample_number])
+                trace_file.write(str(hls4ml_trace[layer.name][sample_number]))
                 trace_file.write(f"Layer output KERAS for {layer.name}")
-                trace_file.write(keras_trace[layer.name][sample_number])
+                trace_file.write(str(keras_trace[layer.name][sample_number]))
                 trace_file.write("\n")
 
     print(tcols.OKGREEN)
@@ -182,3 +192,21 @@ def get_model_activations(model: keras.Model):
             model_activations.append(layer.name)
 
     return model_activations
+
+def deep_dict_update(d, u):
+    """Updates a deep dictionary on its deepsets entries."""
+    for k, v in u.items():
+        if isinstance(v, collections.abc.Mapping):
+            d[k] = deep_dict_update(d.get(k, {}), v)
+        else:
+            d[k] = v
+    return d
+
+
+@contextlib.contextmanager
+def nostdout():
+    """Suppresses the terminal output of a function."""
+    save_stdout = sys.stdout
+    sys.stdout = io.BytesIO()
+    yield
+    sys.stdout = save_stdout

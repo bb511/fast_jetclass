@@ -10,9 +10,9 @@ import numpy as np
 import sklearn.model_selection
 import tensorflow as tf
 
-from fast_deepsets.data import standardization
-from fast_deepsets.data import plots
-from fast_deepsets.util.terminal_colors import tcols
+from fast_jetclass.data import standardization
+from fast_jetclass.data import plots
+from fast_jetclass.util.terminal_colors import tcols
 
 
 class HLS4MLData150(object):

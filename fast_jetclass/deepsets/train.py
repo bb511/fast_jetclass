@@ -5,7 +5,6 @@ import numpy as np
 
 import tensorflow as tf
 from tensorflow import keras
-from tensorflow_model_optimization.python.core.sparsity.keras import pruning_callbacks
 
 # Set keras seed for reproducibility.
 # keras.utils.set_random_seed(123)
@@ -14,11 +13,11 @@ import absl.logging
 
 absl.logging.set_verbosity(absl.logging.ERROR)
 
-from fast_deepsets.util import util
-from fast_deepsets.util import plots
-from fast_deepsets.util.terminal_colors import tcols
-from fast_deepsets.deepsets import util as dsutil
-from fast_deepsets.data.data import HLS4MLData150
+from fast_jetclass.util import util
+from fast_jetclass.util import plots
+from fast_jetclass.util.terminal_colors import tcols
+from fast_jetclass.deepsets import util as dsutil
+from fast_jetclass.data.data import HLS4MLData150
 
 # Set keras float precision. Default is float32.
 # tf.keras.backend.set_floatx("float64")

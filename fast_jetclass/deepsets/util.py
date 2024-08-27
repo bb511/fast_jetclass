@@ -7,12 +7,13 @@ import numpy as np
 import tensorflow as tf
 from tensorflow import keras
 import tensorflow_model_optimization as tfmot
+# from tensorflow_model_optimization.python.core.keras.compat import keras as sparsity
 from tensorflow_model_optimization.sparsity import keras as sparsity
 
-from fast_deepsets.deepsets.deepsets import DeepSetsInv
-from fast_deepsets.deepsets.deepsets_quantised import DeepSetsInvQuantised
-from fast_deepsets.deepsets.deepsets_synth import deepsets_invariant_synth
-from fast_deepsets.util.terminal_colors import tcols
+from fast_jetclass.deepsets.deepsets import DeepSetsInv
+from fast_jetclass.deepsets.deepsets_quantised import DeepSetsInvQuantised
+from fast_jetclass.deepsets.deepsets_synth import deepsets_invariant_synth
+from fast_jetclass.util.terminal_colors import tcols
 
 
 def choose_deepsets(deepsets_type: str, model_hyperparams: dict) -> keras.models.Model:
@@ -108,10 +109,10 @@ def prune_model(model, nsteps: int, pruning_rate: float = 0.5):
                 frequency=nsteps,
             )
         }
-        if isinstance(layer, tf.keras.layers.Dense) and layer.name != "output":
+        if isinstance(layer, keras.layers.Dense) and layer.name != "output":
             return tfmot.sparsity.keras.prune_low_magnitude(layer, **pruning_params)
         return layer
 
-    model = tf.keras.models.clone_model(model, clone_function=prune_function)
+    model = keras.models.clone_model(model, clone_function=prune_function)
 
     return model

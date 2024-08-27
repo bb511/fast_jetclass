@@ -14,12 +14,12 @@ import sklearn
 
 # keras.utils.set_random_seed(123)
 
-from fast_deepsets.util import util
-from fast_deepsets.util import plots
-from fast_deepsets.util import flops
-from fast_deepsets.util.terminal_colors import tcols
-from fast_deepsets.util.terminal_colors import tcols
-from fast_deepsets.data.data import HLS4MLData150
+from fast_jetclass.util import util
+from fast_jetclass.util import plots
+from fast_jetclass.util import flops
+from fast_jetclass.util.terminal_colors import tcols
+from fast_jetclass.util.terminal_colors import tcols
+from fast_jetclass.data.data import HLS4MLData150
 
 # Set keras float precision. Default is float32.
 # tf.keras.backend.set_floatx("float64")
