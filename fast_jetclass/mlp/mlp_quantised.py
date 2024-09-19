@@ -7,7 +7,7 @@ from tensorflow import keras
 import tensorflow.keras.layers as KL
 import qkeras
 
-from fast_deepsets.util import flops
+from fast_jetclass.util import flops
 
 
 class MLPRegularQuantised(keras.Model):

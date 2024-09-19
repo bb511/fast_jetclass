@@ -20,7 +20,7 @@ model_hyperparams:
 compilation_hyperparams:
   optimizer: "adam"
   optimizer_hps:
-    learning_rate: 0.0029
+    learning_rate: 0.0018
   optimizer_callbacks:
     early_stopping:
       monitor: "val_categorical_accuracy"

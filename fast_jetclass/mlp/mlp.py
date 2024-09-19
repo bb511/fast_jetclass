@@ -6,7 +6,7 @@ import tensorflow as tf
 from tensorflow import keras
 import tensorflow.keras.layers as KL
 
-from fast_deepsets.util import flops
+from fast_jetclass.util import flops
 
 
 class MLP(keras.Model):

@@ -1,4 +1,4 @@
-# Definition of the training procedure for the deepsets network.
+# Definition of the training procedure for the mlp network.
 
 import os
 import numpy as np
@@ -14,11 +14,11 @@ import absl.logging
 
 absl.logging.set_verbosity(absl.logging.ERROR)
 
-from fast_deepsets.util import util
-from fast_deepsets.util import plots
-from fast_deepsets.util.terminal_colors import tcols
-from fast_deepsets.mlp import util as mlputil
-from fast_deepsets.data.data import HLS4MLData150
+from fast_jetclass.util import util
+from fast_jetclass.util import plots
+from fast_jetclass.util.terminal_colors import tcols
+from fast_jetclass.mlp import util as mlputil
+from fast_jetclass.data.data import HLS4MLData150
 
 # Set keras float precision. Default is float32.
 # tf.keras.backend.set_floatx("float64")

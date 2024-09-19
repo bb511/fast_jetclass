@@ -6,7 +6,7 @@ import os
 import yaml
 
 
-from fast_deepsets.mlp.train import main
+from fast_jetclass.mlp.train import main
 
 
 parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)

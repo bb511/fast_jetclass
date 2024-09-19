@@ -132,12 +132,12 @@ def roc_curves_uncert(
             alpha=0.5,
         )
 
-    plt.xlabel("True Positive Rate")
-    plt.ylabel("False Positive Rate")
+    plt.xlabel("True Positive Rate", fontsize=11)
+    plt.ylabel("False Positive Rate", fontsize=11)
     plt.ylim(0.001, 1)
     plt.semilogy()
 
-    plt.legend()
+    plt.legend(prop={'size': 11})
     plt.savefig(os.path.join(outdir, "roc_curves.pdf"))
     plt.close()
     print(f"ROC curves plot saved to {outdir}.")

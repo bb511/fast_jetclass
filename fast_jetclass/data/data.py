@@ -6,6 +6,7 @@ import wget
 import tarfile
 
 import h5py
+import pickle
 import numpy as np
 import sklearn.model_selection
 import tensorflow as tf
@@ -57,6 +58,7 @@ class HLS4MLData150(object):
         self.seed = seed
         self.min_pt = 2
         self.kfolds = kfolds
+        self.norm_params = None
 
         self.train_url = (
             "https://zenodo.org/records/3602260/files/hls4ml_LHCjet_150p_train.tar.gz"
@@ -199,9 +201,12 @@ class HLS4MLData150(object):
 
         proc_folder = self.root / "processed"
         self._get_features()
-        norm_params = self._get_normalisation_params()
+        self.norm_params = self._get_normalisation_params()
+        self._save_norm_parameters()
 
-        self.x = standardization.apply_standardisation(self.norm, self.x, norm_params)
+        self.x = standardization.apply_standardisation(
+            self.norm, self.x, self.norm_params
+        )
         if self.seed and self.train:
             self.shuffle_constituents(self.seed)
         self._plot_data()
@@ -228,17 +233,19 @@ class HLS4MLData150(object):
         """
         proc_folder = self.root / "processed"
         if not self.train:
-            train_data_name = proc_output_name = (
-                f"train_{self.norm}_{self.nconst}const_{self.feats}.npy"
-            )
             try:
-                x_data_train = np.load(proc_folder / f"x_{train_data_name}")
+                params = f"normparams_{self.norm}_{self.nconst}const_{self.feats}.pkl"
+                with open(proc_folder / params, 'rb') as file:
+                    norm_params = pickle.load(file)
+                    return norm_params
             except OSError as e:
-                print("Process training data with same hyperparameters first!")
-                print("Need for normalisation of the validation data.")
-                exit(1)
-
-            return standardization.fit_standardisation(self.norm, self.x)
+                print("\nProcessed training data not found when normalising val data.")
+                print("The moments of the training data are needed.")
+                print("Processing training data with same hyperparameters first!")
+                x_data_train = HLS4MLData150(
+                    self.root, self.nconst, self.feats, self.norm, True, self.kfolds
+                )
+                return x_data_train.norm_params
 
         return standardization.fit_standardisation(self.norm, self.x)
 
@@ -250,6 +257,13 @@ class HLS4MLData150(object):
                 self._preproc_raw_data()
 
             self._process_data()
+
+    def _save_norm_parameters(self):
+        """Save the normalisation parameters to a file for importing."""
+        proc_folder = self.root / "processed"
+        params_filename = f"normparams_{self.norm}_{self.nconst}const_{self.feats}.pkl"
+        with open(proc_folder / params_filename, 'wb') as file:
+            pickle.dump(self.norm_params, file)
 
     def _plot_data(self):
         """Plots the normalised data."""

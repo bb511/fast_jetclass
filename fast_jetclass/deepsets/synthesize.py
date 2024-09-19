@@ -34,6 +34,9 @@ def main(args, synth_config: dict):
     root_dir = os.path.dirname(os.path.abspath(args.model_dir))
     hyperparams = util.load_hyperparameter_file(root_dir)
     valid_data = util.import_data(hyperparams["data_hyperparams"], train=False)
+
+    # Take the first 6000 events to do the diagnosis of the synthesis.
+    # More are not really needed and it increases the runtime of this script by a lot.
     valid_data.x = valid_data.x[:6000]
     valid_data.y = valid_data.y[:6000]
     valid_data.shuffle_constituents(args.seed)

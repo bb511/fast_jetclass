@@ -9,11 +9,11 @@ from tensorflow import keras
 import tensorflow_model_optimization as tfmot
 from tensorflow_model_optimization.sparsity import keras as sparsity
 
-from fast_deepsets.mlp.mlp import MLP
-from fast_deepsets.mlp.mlp import MLPRegular
-from fast_deepsets.mlp.mlp_quantised import MLPRegularQuantised
-from fast_deepsets.mlp.mlp_synth import mlp_regularised_synth
-from fast_deepsets.util.terminal_colors import tcols
+from fast_jetclass.mlp.mlp import MLP
+from fast_jetclass.mlp.mlp import MLPRegular
+from fast_jetclass.mlp.mlp_quantised import MLPRegularQuantised
+from fast_jetclass.mlp.mlp_synth import mlp_regularised_synth
+from fast_jetclass.util.terminal_colors import tcols
 
 
 def choose_mlp(mlp_type: str, model_hyperparams: dict) -> keras.models.Model:

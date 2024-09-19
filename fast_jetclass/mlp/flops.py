@@ -1,4 +1,4 @@
-# Calculates the number of FLOPs in the DeepSets models.
+# Calculates the number of FLOPs in the mlp models.
 
 import numpy as np
 import functools
@@ -10,9 +10,9 @@ from tensorflow import keras
 def get_flops(model: keras.Model) -> dict:
     """Calculates and returns the number of floating point operations in a DS model.
 
-    Only works for the models in deepsets/deepsets.py which are comprised of sequential
-    layers. This method does not work for the other implementations of the deepsets
-    models such as deepsets_quantised.py or deepsets_synth.py
+    Only works for the models in mlp/mlp.py which are comprised of sequential
+    layers. This method does not work for the other implementations of the mlp
+    models such as mlp_quantised.py or mlp_synth.py
     """
 
     flops = {"layer": 0, "activation": 0}

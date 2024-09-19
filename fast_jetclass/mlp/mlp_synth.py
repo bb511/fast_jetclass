@@ -10,7 +10,7 @@ import qkeras
 
 
 def mlp_regularised_synth(
-    input_shape: tuple, layers: list, activ: str = "relu", nbits: int = 8, **kwargs
+    input_size: tuple, layers: list, activ: str = "relu", nbits: int = 8, **kwargs
 ):
     """Quantised MLP like in mlp_quantised.py but in a format consistent with hls4ml."""
 
@@ -18,7 +18,7 @@ def mlp_regularised_synth(
     quantizer = format_quantiser(nbits)
     activ = format_qactivation(activ, nbits)
 
-    mlp_input = keras.Input(shape=input_shape, name="input_layer")
+    mlp_input = keras.Input(shape=input_size[1:], name="input_layer")
     mlp_layer = KL.Flatten()(mlp_input)
     mlp_layer = qkeras.QDense(
         layers[0],
@@ -43,7 +43,6 @@ def mlp_regularised_synth(
                 bias_quantizer=quantizer,
                 kernel_quantizer=quantizer,
             )(mlp_activ)
-        print(activ)
         mlp_activ = qkeras.QActivation(activ)(mlp_layer)
 
     mlp_layer = KL.Dense(nclasses)(mlp_activ)

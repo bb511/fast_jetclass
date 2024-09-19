@@ -26,7 +26,7 @@ def select_feature_labels(choice: str) -> list[str]:
         "$\\phi^\\mathrm{rot}$",
         "$\\Delta_R$",
         "$\\cos(\\theta)$",
-        "$\\cos(\\theta^\\mathrm{rel}$",
+        "$\\cos(\\theta^\\mathrm{rel})$",
     ]
     andre_feature_labels = ["p_T", "\\eta^\\mathrm{rel}", "\\phi^\\mathrm{rel}"]
 

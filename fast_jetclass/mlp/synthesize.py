@@ -1,6 +1,12 @@
 # Script that synthesizes a given deepsets model and then returns the performance
 # performance metrics for the synthesis.
+import sys
+import io
 import os
+import collections.abc
+import json
+import contextlib
+
 import numpy as np
 import tensorflow as tf
 import hls4ml
@@ -8,107 +14,83 @@ from tensorflow_model_optimization.python.core.sparsity.keras import pruning_wra
 from tensorflow_model_optimization.sparsity.keras import strip_pruning
 import qkeras
 
-np.random.seed(12)
-tf.random.set_seed(12)
+# np.random.seed(12)
+# tf.random.set_seed(12)
 
 from tensorflow import keras
 import tensorflow.keras.layers as KL
 
-import util.util
-import util.plots
-import util.data
-from . import flops
-from util.terminal_colors import tcols
+from fast_jetclass.util import util
+from fast_jetclass.util import plots
+from fast_jetclass.util.terminal_colors import tcols
+from fast_jetclass.data.data import HLS4MLData150
 
 
-def main(args):
-    util.util.device_info()
-    seed = args["const_seed"]
-    model_dir = args["model_dir"]
-    plots_dir = util.util.make_output_directories(args["model_dir"], f"plots_{seed}")
-    synthesis_dir = util.util.make_output_directories(args["model_dir"], "synthesis")
+def main(args, synth_config: dict):
+    util.device_info()
+    synthesis_dir = util.make_output_directories(args.model_dir, "synthesis")
 
     print(tcols.OKGREEN + "\nIMPORTING DATA AND MODEL\n" + tcols.ENDC)
-    hyperparam_dict = util.util.load_hyperparameter_files(args["model_dir"])
-    data = import_data(hyperparam_dict)
-    data.test_data = shuffle_constituents(data.test_data, seed)
-    model = import_model(model_dir, hyperparam_dict)
+    root_dir = os.path.dirname(os.path.abspath(args.model_dir))
+    hyperparams = util.load_hyperparameter_file(root_dir)
+    valid_data = util.import_data(hyperparams["data_hyperparams"], train=False)
 
-    print(tcols.OKGREEN + "\nCONFIGURING MODEL\n" + tcols.ENDC)
-    config = hls4ml.utils.config_from_keras_model(model, granularity="name")
-    config = config_hls4ml(config)
+    # Take the first 6000 events to do the diagnosis of the synthesis.
+    # More are not really needed and it increases the runtime of this script by a lot.
+    valid_data.x = valid_data.x[:6000]
+    valid_data.y = valid_data.y[:6000]
+    valid_data.shuffle_constituents(args.seed)
+    model = import_model(args.model_dir, hyperparams)
+
+    print(tcols.OKGREEN + "\nCONFIGURING SYNTHESIS\n" + tcols.ENDC)
+    hls4ml_config = hls4ml.utils.config_from_keras_model(model, granularity='name')
+    deep_dict_update(hls4ml_config, synth_config)
 
     model_activations = get_model_activations(model)
+    # Set the model activation function rounding and saturation modes.
     hls4ml.model.optimizer.get_optimizer("output_rounding_saturation_mode").configure(
         layers=model_activations,
         rounding_mode="AP_RND",
         saturation_mode="AP_SAT",
     )
 
-    for layer in config["LayerName"].keys():
-        config["LayerName"][layer]["Trace"] = True
+    if args.diagnose:
+        for layer in hls4ml_config["LayerName"].keys():
+            hls4ml_config["LayerName"][layer]["Trace"] = True
 
+    print(tcols.HEADER + "Configuration for hls4ml: " + tcols.ENDC)
+    print(json.dumps(hls4ml_config, indent=4, sort_keys=True))
     hls_model = hls4ml.converters.convert_from_keras_model(
         model,
-        hls_config=config,
+        project_name='mlp_synthesis',
+        hls_config=hls4ml_config,
         output_dir=synthesis_dir,
         part="xcvu13p-flga2577-2-e",
-        # part="xcvu9p-flga2577-2l-e",
         io_type="io_parallel",
     )
 
-    print(tcols.OKGREEN + "\nRUNNING MODEL DIAGNOSTICS\n" + tcols.ENDC)
     hls_model.compile()
-    # run_trace(model, hls_model, data.test_data[:1000], sample_number=0)
-    # profile_model(model, hls_model, data.test_data, synthesis_dir)
+    if args.diagnose:
+        print(tcols.OKGREEN + "\nRUNNING MODEL DIAGNOSTICS" + tcols.ENDC)
+        run_trace(model, hls_model, valid_data.x, synthesis_dir)
+        profile_model(model, hls_model, valid_data.x, synthesis_dir)
     hls_model.write()
 
     print(tcols.OKGREEN + "\nTESTING MODEL PERFORMANCE\n" + tcols.ENDC)
-    print(tcols.HEADER + f"\nRunning inference for {model_dir}" + tcols.ENDC)
-    y_pred = run_inference(model, data, plots_dir)
-    acc = calculate_accuracy(y_pred, data.test_target)
-    y_pred = run_inference(hls_model, data, plots_dir)
-    acc_synth = calculate_accuracy(y_pred, data.test_target)
+    print(tcols.HEADER + f"\nRunning inference for {args.model_dir}" + tcols.ENDC)
+    y_pred = run_inference(model, valid_data)
+    acc = calculate_accuracy(y_pred, valid_data.y)
+    y_pred = hls_model.predict(valid_data.x)
+    acc_synth = calculate_accuracy(y_pred, valid_data.y)
     print(f"Accuracy model: {acc:.3f}")
     print(f"Accuracy synthed model: {acc_synth:.3f}")
     print(f"Accuracy ratio: {acc_synth/acc:.3f}")
 
 
-def config_hls4ml(config: dict):
-    """Adds additional configuration to hls4ml config dictionary."""
-    config["Model"]["Strategy"] = "Latency"
-
-    print(config["LayerName"])
-    for layer_name in config["LayerName"].keys():
-        if "dense" in layer_name:
-            config["LayerName"][layer_name]["ParallelizationFactor"] = 1
-            config["LayerName"][layer_name]["ReuseFactor"] = 1
-            config["LayerName"][layer_name]["Strategy"] = "Latency"
-            # Continue to avoid the 'q_dense_linear' layers'
-            continue
-
-    config["LayerName"]["input_layer"]["Precision"] = "ap_fixed<12,4,AP_RND,AP_SAT>"
-    # config['LayerName']['softmax']['Implementation'] = 'latency'
-    util.util.nice_print_dictionary("HLS Configuration", config)
-
-    return config
-
-
-def import_data(hyperparams):
-    """Import the data used for training and validating the network."""
-    fpath = hyperparams["data_hyperparams"]["fpath"]
-    if hyperparams["data_hyperparams"]["fname_test"]:
-        fname = hyperparams["data_hyperparams"]["fname_test"].rsplit("_", 1)[0]
-    else:
-        fname = hyperparams["data_hyperparams"]["fname"]
-
-    return util.data.Data(fpath=fpath, fname=fname, only_test=True)
-
-
 def import_model(model_dir: str, hyperparams: dict):
     """Imports the model from a specified path. Model is saved in tf format."""
-    print(tcols.HEADER + "Importing the model..." + tcols.ENDC)
-    util.util.nice_print_dictionary("DS hps:", hyperparams["model_hyperparams"])
+    print(tcols.HEADER + "\n\nMLP hyperparams and architecture: " + tcols.ENDC)
+    print(json.dumps(hyperparams['model_hyperparams'], indent=4, sort_keys=True))
     model = keras.models.load_model(
         model_dir,
         compile=False,
@@ -119,7 +101,7 @@ def import_model(model_dir: str, hyperparams: dict):
             "PruneLowMagnitude": pruning_wrapper.PruneLowMagnitude,
         },
     )
-    if "pruning_rate" in hyperparams["training_hyperparams"]:
+    if "pruning_rate" in hyperparams["training_hyperparams"].keys():
         if hyperparams["training_hyperparams"]["pruning_rate"] > 0:
             model = strip_pruning(model)
 
@@ -129,45 +111,28 @@ def import_model(model_dir: str, hyperparams: dict):
 
 
 def calculate_accuracy(y_pred: np.ndarray, y_true: np.ndarray):
-    """Computes accuracy for a model's predictions."""
+    """Computes accuracy for a model's predictions, given the true labels y_true."""
     acc = keras.metrics.CategoricalAccuracy()
     acc.update_state(y_true, y_pred)
 
     return acc.result().numpy()
 
 
-def shuffle_constituents(data: np.ndarray, const_seed: int) -> np.ndarray:
-    """Shuffles the constituents based on an array of seeds.
-
-    Note that each jet's constituents is shuffled with respect to a seed that is fixed.
-    This seed is different for each jet.
-    """
-    print("Shuffling constituents...")
-
-    rng = np.random.default_rng(const_seed)
-    seeds = rng.integers(low=0, high=10000, size=data.shape[0])
-
-    for jet_idx, seed in enumerate(seeds):
-        shuffling = np.random.RandomState(seed=seed).permutation(data.shape[1])
-        data[jet_idx, :] = data[jet_idx, shuffling]
-
-    print(tcols.OKGREEN + f"Shuffling done! \U0001F0CF" + tcols.ENDC)
-
-    return data
-
-
-def run_inference(model: keras.Model, data: util.data.Data, plots_dir: list):
+def run_inference(model: keras.Model, data: HLS4MLData150):
     """Computes predictions of a model and saves them to numpy files."""
-    y_pred = model.predict(data.test_data)
-    y_pred.astype("float32").tofile(os.path.join(plots_dir, "y_pred.dat"))
+    y_pred = model.predict(data.x)
+    if isinstance(model.layers[-1], keras.layers.Dense):
+        # Pass the outputs through a softmax layer if the last layer is just a dense.
+        y_pred = tf.nn.softmax(y_pred).numpy()
 
     return y_pred
 
 
-def profile_model(
-    model: keras.Model, hls_model: hls4ml.model, data: np.ndarray, outdir
-):
-    """Profile the hls4ml model to see if it loses performance and if yes, where."""
+def profile_model(model: keras.Model, hls_model: hls4ml.model, data: np.ndarray, outdir):
+    """Profile the hls4ml model to see the bit width of every layer.
+
+    The plots in this function show the distribution of weights in the network.
+    """
     fig1, fig2, fig3, fig4 = hls4ml.model.profiling.numerical(
         model=model, hls_model=hls_model, X=data[:5000]
     )
@@ -184,30 +149,70 @@ def profile_model(
     )
 
 
-def run_trace(
-    model: keras.Model, hls_model: hls4ml.model, data: np.ndarray, sample_number: int
-):
-    """Shows output of every layer given a certain sample."""
-    hls4ml_pred, hls4ml_trace = hls_model.trace(data)
-    keras_trace = hls4ml.model.profiling.get_ymodel_keras(model, data)
-    for layer in model.layers:
-        if layer.name == "input_layer":
-            continue
-        print(f"Layer output HLS4ML for {layer.name}")
-        print(hls4ml_trace[layer.name][sample_number])
-        print(f"Layer output KERAS for {layer.name}")
-        print(keras_trace[layer.name][sample_number])
+def run_trace(model: keras.Model, hls_model: hls4ml.model, data: np.ndarray, outdir):
+    """Shows output of every layer given a certain sample.
 
-        print("")
+    This is used to compute the outputs in every layer for the hls4ml firmware model
+    against the qkeras model. The outputs of the quantized layers is not quantized
+    itself in the QKERAS model but it is in hls4ml. A big difference in outputs is
+    indicative that the precision of these outputs should be set higher manually
+    in hls4ml.
+    """
+    # Show the weights of the network only for 3 of the samples, as defined below.
+    sample_numbers = [0, 49, 99]
+
+    # Take just the first 100 events of the data set.
+    hls4ml_pred, hls4ml_trace = hls_model.trace(data[:100])
+    keras_trace = hls4ml.model.profiling.get_ymodel_keras(model, data[:100])
+
+    # Write the weights of the hls4ml and qkeras networks for the 3 specified samples.
+    trace_file_path = os.path.join(outdir, "trace_output.log")
+    with open(trace_file_path, "w") as trace_file:
+        for sample_number in sample_numbers:
+            for layer in model.layers:
+                # Skip input and flatten layers since they are not really layers.
+                if layer.name == "input_layer":
+                    continue
+                if layer.name == "flatten":
+                    continue
+                trace_file.write(f"Layer output HLS4ML for {layer.name}")
+                trace_file.write(str(hls4ml_trace[layer.name][sample_number]))
+                trace_file.write(f"Layer output KERAS for {layer.name}")
+                trace_file.write(str(keras_trace[layer.name][sample_number]))
+                trace_file.write("\n")
+
+    print(tcols.OKGREEN)
+    print(f"Wrote trace for samples {sample_numbers} to file {trace_file_path}.")
+    print(tcols.ENDC)
 
 
 def get_model_activations(model: keras.Model):
-    """Loooks at the layers in a model and returns a list with all the activations."""
+    """Looks at the layers in a model and returns a list with all the activations.
+
+    This is done such that the precision of the activation functions is set separately
+    for the synthesis on the FPGA.
+    """
     model_activations = []
     for layer in model.layers:
         if "activation" in layer.name:
             model_activations.append(layer.name)
-        elif "softmax" in layer.name:
-            model_activations.append(layer.name)
 
     return model_activations
+
+def deep_dict_update(d, u):
+    """Updates a deep dictionary on its deepsets entries."""
+    for k, v in u.items():
+        if isinstance(v, collections.abc.Mapping):
+            d[k] = deep_dict_update(d.get(k, {}), v)
+        else:
+            d[k] = v
+    return d
+
+
+@contextlib.contextmanager
+def nostdout():
+    """Suppresses the terminal output of a function."""
+    save_stdout = sys.stdout
+    sys.stdout = io.BytesIO()
+    yield
+    sys.stdout = save_stdout
