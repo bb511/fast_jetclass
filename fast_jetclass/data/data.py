@@ -30,7 +30,7 @@ class HLS4MLData150(object):
             The raw number of constituents is 150.
         feats: Which feature selection scheme should be applied. 'ptetaphi' for getting
             the transverse momentum, pseudo-rapidity, and azimuthal angle of each
-            cosntituents for every jet. Otherwise, 'all' gets all the features of
+            cosntituents for every jet. Otherwise, 'allfeats' gets all the features of
             each constituents.
         norm: What kind of normalisation to apply to the features of the data.
             Currently implemented: minmax, robust, or standard.
@@ -261,6 +261,8 @@ class HLS4MLData150(object):
     def _save_norm_parameters(self):
         """Save the normalisation parameters to a file for importing."""
         proc_folder = self.root / "processed"
+        if not proc_folder.is_dir():
+            os.makedirs(proc_folder)
         params_filename = f"normparams_{self.norm}_{self.nconst}const_{self.feats}.pkl"
         with open(proc_folder / params_filename, 'wb') as file:
             pickle.dump(self.norm_params, file)
