@@ -33,6 +33,7 @@ class MLP(keras.Model):
         self.flops = {"layer": 0, "activation": 0}
 
         self._build_mlp()
+        self.output_layer = KL.Dense(self.output_dim)
 
     def _build_mlp(self):
         input_shape = list(self.input_size[1:])
@@ -43,12 +44,14 @@ class MLP(keras.Model):
             self.mlp.add(KL.Activation(self.activ))
             self.flops["activation"] += flops.get_flops_activ(input_shape, self.activ)
 
-        self.mlp.add(KL.Dense(self.output_dim))
         self.flops["layer"] += flops.get_flops_dense(input_shape, self.output_dim)
 
     def call(self, inputs: np.ndarray):
         inputs = KL.Flatten()(inputs)
-        return self.mlp(inputs)
+        mlp_outputs = self.mlp(inputs)
+        logits = self.output_layer(mlp_outputs)
+
+        return logits
 
 
 class MLPRegular(keras.Model):
@@ -77,6 +80,7 @@ class MLPRegular(keras.Model):
         self.flops = {"layer": 0, "activation": 0}
 
         self._build_mlp(**kwargs)
+        self.output_layer = KL.Dense(self.output_dim)
 
     def _build_mlp(self, **kwargs):
         input_shape = list(self.input_size[1:])
@@ -92,9 +96,11 @@ class MLPRegular(keras.Model):
             self.mlp.add(KL.Activation(self.activ))
             self.flops["activation"] += flops.get_flops_activ(input_shape, self.activ)
 
-        self.mlp.add(KL.Dense(self.output_dim))
         self.flops["layer"] += flops.get_flops_dense(input_shape, self.output_dim)
 
     def call(self, inputs: np.ndarray):
         inputs = KL.Flatten()(inputs)
-        return self.mlp(inputs)
+        mlp_outputs = self.mlp(inputs)
+        logits = self.output_layer(mlp_outputs)
+
+        return logits

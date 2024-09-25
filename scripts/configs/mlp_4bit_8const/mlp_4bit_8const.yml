@@ -1,5 +1,5 @@
 ---
-outdir: 'mlp_8bit_8const_synth'
+outdir: 'mlp_4bit_8const'
 data_hyperparams:
   root: '../data/jetid'
   nconst: 8
@@ -8,12 +8,12 @@ data_hyperparams:
   kfolds: 5
   seed: 511
 
-model_type: "smlp_reg"
+model_type: "qmlp_reg"
 model_hyperparams:
   layers: [120, 60, 32, 64, 64, 64, 32, 44]
   activ: "relu"
   l1_coeff: 0.0000131
-  nbits: 8
+  nbits: 4
   output_dim: 5
 
 compilation_hyperparams:
@@ -30,7 +30,7 @@ compilation_hyperparams:
       patience: 10
       min_lr: 0.0001
 
-  loss: "categorical_crossentropy"
+  loss: "softmax_with_crossentropy"
   metrics: ["categorical_accuracy"]
   early_stopping: 20
 

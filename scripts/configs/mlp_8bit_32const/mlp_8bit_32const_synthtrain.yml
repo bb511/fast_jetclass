@@ -30,7 +30,7 @@ compilation_hyperparams:
       patience: 10
       min_lr: 0.0001
 
-  loss: "softmax_with_crossentropy"
+  loss: "categorical_crossentropy"
   metrics: ["categorical_accuracy"]
   early_stopping: 20
 

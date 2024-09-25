@@ -116,7 +116,7 @@ def save_model_weights(model_dir: str, model: keras.Model):
 def run_inference(model: keras.Model, data: HLS4MLData150, plots_dir: str):
     """Computes predictions of a model and saves them to numpy files."""
     y_pred = model.predict(data.x)
-    if isinstance(model.layers[0].layers[-1], keras.layers.Dense):
+    if isinstance(model.layers[-1], keras.layers.Dense):
         # Pass the outputs through a softmax layer if the last layer is just a dense.
         # i.e., there's not softmax intrinsic to the network in the last layer.
         y_pred = tf.nn.softmax(y_pred).numpy()

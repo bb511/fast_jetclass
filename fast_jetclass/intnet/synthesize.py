@@ -20,6 +20,7 @@ import qkeras
 from tensorflow import keras
 import tensorflow.keras.layers as KL
 
+from fast_jetclass.intnet import hls_node_edge_projection
 from fast_jetclass.util import util
 from fast_jetclass.util import plots
 from fast_jetclass.util.terminal_colors import tcols
@@ -43,11 +44,16 @@ def main(args, synth_config: dict):
     model = import_model(args.model_dir, hyperparams)
 
     print(tcols.OKGREEN + "\nCONFIGURING SYNTHESIS\n" + tcols.ENDC)
-    hls4ml_config = hls4ml.utils.config_from_keras_model(model, granularity='name')
+    hls4ml_config = hls4ml.utils.config_from_keras_model(
+        model, granularity='name', default_precision="ap_fixed<16,6>"
+    )
     deep_dict_update(hls4ml_config, synth_config)
 
-    model_activations = get_model_activations(model)
+    # Register the node to edge projection layer for the hls model.
+    # This does not exist naturally in hls or keras, so need to manually implement.
+    hls_node_edge_projection.register_custom_layer()
     # Set the model activation function rounding and saturation modes.
+    model_activations = get_model_activations(model)
     hls4ml.model.optimizer.get_optimizer("output_rounding_saturation_mode").configure(
         layers=model_activations,
         rounding_mode="AP_RND",
@@ -80,6 +86,7 @@ def main(args, synth_config: dict):
     print(tcols.HEADER + f"\nRunning inference for {args.model_dir}" + tcols.ENDC)
     y_pred = run_inference(model, valid_data)
     acc = calculate_accuracy(y_pred, valid_data.y)
+    # Run the C++ code compiled with gcc while ignoring all the hardware directives.
     y_pred = hls_model.predict(valid_data.x)
     acc_synth = calculate_accuracy(y_pred, valid_data.y)
     print(f"Accuracy model: {acc:.3f}")

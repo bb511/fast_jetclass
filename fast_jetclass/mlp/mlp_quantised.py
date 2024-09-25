@@ -37,6 +37,7 @@ class MLPRegularQuantised(keras.Model):
         self.activ = format_qactivation(activ, 8)
 
         self._build_mlp(**kwargs)
+        self.output_layer = KL.Dense(output_dim)
 
     def _build_mlp(self, **kwargs):
         input_shape = list(self.input_size[1:])
@@ -52,11 +53,12 @@ class MLPRegularQuantised(keras.Model):
             )
             self.mlp.add(qkeras.QActivation(self.activ))
 
-        self.mlp.add(KL.Dense(self.output_dim))
-
     def call(self, inputs: np.ndarray):
         inputs = KL.Flatten()(inputs)
-        return self.mlp(inputs)
+        mlp_outputs = self.mlp(inputs)
+        logits = self.output_layer(mlp_outputs)
+
+        return logits
 
 
 def format_quantiser(nbits: int):

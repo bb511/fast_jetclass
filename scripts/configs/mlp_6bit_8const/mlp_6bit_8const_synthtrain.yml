@@ -1,5 +1,5 @@
 ---
-outdir: 'mlp_8bit_8const_synth'
+outdir: 'mlp_6bit_8const_synth'
 data_hyperparams:
   root: '../data/jetid'
   nconst: 8
@@ -13,7 +13,7 @@ model_hyperparams:
   layers: [120, 60, 32, 64, 64, 64, 32, 44]
   activ: "relu"
   l1_coeff: 0.0000131
-  nbits: 8
+  nbits: 6
   output_dim: 5
 
 compilation_hyperparams:

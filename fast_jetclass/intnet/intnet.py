@@ -7,7 +7,6 @@ import itertools
 import tensorflow as tf
 from tensorflow import keras
 import tensorflow.keras.layers as KL
-import qkeras
 
 from fast_jetclass.util import flops
 
@@ -142,7 +141,7 @@ class IntNet(keras.Model):
     def _build_effects_net(self):
         input_shape = [self.input_size[1], self.input_size[-1]*2]
         self.effects = keras.Sequential(name="EffectsNetwork")
-        self.effects.add(KL.Conv1D(self.input_size[-1]*2, kernel_size=1))
+
         for layer in self.effects_layers:
             self.effects.add(KL.Conv1D(layer, kernel_size=1))
             self.flops["layer"] += flops.get_flops_conv1d(input_shape, layer)
@@ -154,9 +153,7 @@ class IntNet(keras.Model):
     def _build_objects_net(self):
         input_shape = [self.input_size[1], self.input_size[-1] + self.effects_layers[-1]]
         self.objects = keras.Sequential(name="ObjectsNetwork")
-        self.objects.add(
-            KL.Conv1D(self.input_size[-1] + self.effects_layers[-1], kernel_size=1)
-        )
+
         for layer in self.objects_layers:
             self.objects.add(KL.Conv1D(layer, kernel_size=1))
             self.flops["layer"] += flops.get_flops_conv1d(input_shape, layer)
