@@ -1,7 +1,0 @@
-#!/usr/bin/env bash
-
-nohup python -u mlp_train --test_kfold 0 --gpu 0 --nbits 6 --outdir mlpreg_synthable_6bits_8const_ptetaphi_kfolds/kfold_0 > ./logs/mlpreg_synthable_6bits_8const_ptetaphi_kfold_0 &
-nohup python -u mlp_train --test_kfold 1 --gpu 1 --nbits 6 --outdir mlpreg_synthable_6bits_8const_ptetaphi_kfolds/kfold_1 > ./logs/mlpreg_synthable_6bits_8const_ptetaphi_kfold_1 &
-nohup python -u mlp_train --test_kfold 2 --gpu 2 --nbits 6 --outdir mlpreg_synthable_6bits_8const_ptetaphi_kfolds/kfold_2 > ./logs/mlpreg_synthable_6bits_8const_ptetaphi_kfold_2 &
-nohup python -u mlp_train --test_kfold 3 --gpu 3 --nbits 6 --outdir mlpreg_synthable_6bits_8const_ptetaphi_kfolds/kfold_3 > ./logs/mlpreg_synthable_6bits_8const_ptetaphi_kfold_3 &
-nohup python -u mlp_train --test_kfold 4 --gpu 1 --nbits 6 --outdir mlpreg_synthable_6bits_8const_ptetaphi_kfolds/kfold_4 > ./logs/mlpreg_synthable_6bits_8const_ptetaphi_kfold_4 &
