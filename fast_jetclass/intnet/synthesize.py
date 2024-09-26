@@ -204,7 +204,7 @@ def get_model_activations(model: keras.Model):
     return model_activations
 
 def deep_dict_update(d, u):
-    """Updates a deep dictionary on its deepsets entries."""
+    """Updates a deep dictionary on its deepest entries."""
     for k, v in u.items():
         if isinstance(v, collections.abc.Mapping):
             d[k] = deep_dict_update(d.get(k, {}), v)

@@ -1,2 +1,4 @@
-# deepsets_synth
-Synthesizing the invariant version of the deepsets architecture using hls4ml. This architecture is meant to be used in a fast inference regime.
+[![Email Badge](https://img.shields.io/badge/blah-podagiu%40ethz.ch-blue?style=flat-square&logo=minutemailer&logoColor=white&label=%20&labelColor=grey)](mailto:podagiu@ethz.ch)
+
+# Ultrafast Jet Classification using Geometric Learning for the HL-LHC
+
