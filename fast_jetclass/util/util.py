@@ -105,6 +105,8 @@ def print_training_attributes(model: keras.models.Model, train_hyperparams: dict
     print("\nTraining parameters")
     print("-------------------")
     print(tcols.OKGREEN + "Optimizer: \t" + tcols.ENDC, model.optimizer.get_config())
-    print(tcols.OKGREEN + "Batch size: \t" + tcols.ENDC, train_hyperparams["batch_size"])
+    print(
+        tcols.OKGREEN + "Batch size: \t" + tcols.ENDC, train_hyperparams["batch_size"]
+    )
     print(tcols.OKGREEN + "Training epochs:" + tcols.ENDC, train_hyperparams["epochs"])
     print("")

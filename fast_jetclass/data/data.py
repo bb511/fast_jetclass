@@ -38,6 +38,7 @@ class HLS4MLData150(object):
             of this data set.
         seed: If provided, shuffles the *constituents* in the data set with given seed.
     """
+
     def __init__(
         self,
         root: str,
@@ -46,7 +47,7 @@ class HLS4MLData150(object):
         norm: str,
         train: bool,
         kfolds: 0,
-        seed: int = None
+        seed: int = None,
     ):
         super().__init__()
         self.root = Path(root)
@@ -235,7 +236,7 @@ class HLS4MLData150(object):
         if not self.train:
             try:
                 params = f"normparams_{self.norm}_{self.nconst}const_{self.feats}.pkl"
-                with open(proc_folder / params, 'rb') as file:
+                with open(proc_folder / params, "rb") as file:
                     norm_params = pickle.load(file)
                     return norm_params
             except OSError as e:
@@ -264,7 +265,7 @@ class HLS4MLData150(object):
         if not proc_folder.is_dir():
             os.makedirs(proc_folder)
         params_filename = f"normparams_{self.norm}_{self.nconst}const_{self.feats}.pkl"
-        with open(proc_folder / params_filename, 'wb') as file:
+        with open(proc_folder / params_filename, "wb") as file:
             pickle.dump(self.norm_params, file)
 
     def _plot_data(self):

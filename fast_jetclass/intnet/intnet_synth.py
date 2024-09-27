@@ -19,13 +19,13 @@ class NodeEdgeProjection(KL.Layer):
         node_to_edge: Whether the projection happens from nodes to edges (True) or
             the edge matrix gets projected into the nodes (False).
     """
+
     def __init__(self, receiving: bool = True, node_to_edge: bool = True, **kwargs):
         super().__init__(**kwargs)
         self._receiving = receiving
         self._node_to_edge = node_to_edge
 
     def build(self, input_shape: tuple):
-
         if self._node_to_edge:
             self._n_nodes = input_shape[-2]
             self._n_edges = self._n_nodes * (self._n_nodes - 1)
@@ -93,9 +93,9 @@ def intnet_synth(
     classifier_layers: list = [32, 32],
     output_dim: int = 5,
     activ: str = "relu",
-    aggreg: str =  "mean",
+    aggreg: str = "mean",
     aggreg_precision: dict = {"bits": 20, "integer": 10},
-    nbits: int = 8
+    nbits: int = 8,
 ):
     """Deep sets permutation invariant graph network https://arxiv.org/abs/1703.06114.
 
@@ -132,50 +132,48 @@ def intnet_synth(
     )
     # Effects network.
     x = qkeras.QConv1D(
-            effects_layers[0],
-            kernel_size=1,
-            kernel_quantizer=quant,
-            bias_quantizer=quant,
-            name=f"effects{1}"
-        )(intnet_input)
+        effects_layers[0],
+        kernel_size=1,
+        kernel_quantizer=quant,
+        bias_quantizer=quant,
+        name=f"effects{1}",
+    )(intnet_input)
     x = qkeras.QActivation(activ)(x)
     for i, layer in enumerate(effects_layers[1:]):
         x = qkeras.QConv1D(
-                layer,
-                kernel_size=1,
-                kernel_quantizer=quant,
-                bias_quantizer=quant,
-                name=f"effects{i+2}"
-            )(x)
-        x = qkeras.QActivation(activ)(x)
-
-    input_objects = KL.Concatenate(axis=-1, name="concat_obj")(
-        [intnet_input, x]
-    )
-
-    # Objects network.
-    x = qkeras.QConv1D(
-            objects_layers[0],
+            layer,
             kernel_size=1,
             kernel_quantizer=quant,
             bias_quantizer=quant,
-            name=f"objects{1}"
-        )(input_objects)
+            name=f"effects{i+2}",
+        )(x)
+        x = qkeras.QActivation(activ)(x)
+
+    input_objects = KL.Concatenate(axis=-1, name="concat_obj")([intnet_input, x])
+
+    # Objects network.
+    x = qkeras.QConv1D(
+        objects_layers[0],
+        kernel_size=1,
+        kernel_quantizer=quant,
+        bias_quantizer=quant,
+        name=f"objects{1}",
+    )(input_objects)
     x = qkeras.QActivation(activ)(x)
     for i, layer in enumerate(objects_layers[1:]):
         x = qkeras.QConv1D(
-                layer,
-                kernel_size=1,
-                kernel_quantizer=quant,
-                bias_quantizer=quant,
-                name=f"objects{i+2}"
-            )(x)
+            layer,
+            kernel_size=1,
+            kernel_quantizer=quant,
+            bias_quantizer=quant,
+            name=f"objects{i+2}",
+        )(x)
         x = qkeras.QActivation(activ)(x)
 
     # Trick to change the precision of the input to the aggregator.
     x = qkeras.QActivation(
-            qkeras.quantized_bits(**aggreg_precision, symmetric=0, keep_negative=1)
-        )(x)
+        qkeras.quantized_bits(**aggreg_precision, symmetric=0, keep_negative=1)
+    )(x)
 
     # Aggregator
     agg = choose_aggregator(aggreg)
@@ -184,8 +182,8 @@ def intnet_synth(
     # Classifier network.
     for i, layer in enumerate(classifier_layers):
         x = qkeras.QDense(
-                layer, kernel_quantizer=quant, bias_quantizer=quant, name=f"class{i+1}"
-            )(x)
+            layer, kernel_quantizer=quant, bias_quantizer=quant, name=f"class{i+1}"
+        )(x)
         x = qkeras.QActivation(activ)(x)
 
     intnet_output = KL.Dense(output_dim)(x)

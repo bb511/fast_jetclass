@@ -137,7 +137,7 @@ def roc_curves_uncert(
     plt.ylim(0.001, 1)
     plt.semilogy()
 
-    plt.legend(prop={'size': 11})
+    plt.legend(prop={"size": 11})
     plt.savefig(os.path.join(outdir, "roc_curves.pdf"))
     plt.close()
     print(f"ROC curves plot saved to {outdir}.")

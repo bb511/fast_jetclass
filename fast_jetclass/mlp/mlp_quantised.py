@@ -19,6 +19,7 @@ class MLPRegularQuantised(keras.Model):
         activ: Activation function to use between the dense layers.
         kwargs: Regularisation parameters.
     """
+
     def __init__(
         self,
         input_size: tuple,
@@ -26,7 +27,7 @@ class MLPRegularQuantised(keras.Model):
         activ: str = "relu",
         output_dim: int = 5,
         nbits: int = 8,
-        **kwargs
+        **kwargs,
     ):
         super(MLPRegularQuantised, self).__init__(name="MLPRegularisedQuantised")
         self.input_size = input_size

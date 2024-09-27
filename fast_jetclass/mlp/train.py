@@ -48,7 +48,7 @@ def main(config: dict):
             train_kfolds,
             valid_kfolds,
             config["training_hyperparams"],
-            outdir_kfold
+            outdir_kfold,
         )
         model.set_weights(initial_weights)
         tf.keras.backend.clear_session()
@@ -75,7 +75,7 @@ def train_and_save(
     train_data: tuple,
     valid_data: tuple,
     hps: dict,
-    outdir: str
+    outdir: str,
 ):
     """Run keras training and save model at the end."""
     history = model.fit(
@@ -83,7 +83,7 @@ def train_and_save(
         y=train_data[1],
         callbacks=model_callbacks,
         validation_data=valid_data,
-        **hps
+        **hps,
     )
     print(tcols.OKGREEN + "\n\n\nSAVING MODEL TO: " + tcols.ENDC, outdir)
     model.save(outdir, save_format="tf")

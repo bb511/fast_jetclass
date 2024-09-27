@@ -91,7 +91,9 @@ def choose_loss(choice: str, **kwargs) -> keras.losses.Loss:
     """Return tensorflow loss object given an identifier string."""
 
     switcher = {
-        "categorical_crossentropy": lambda: keras.losses.CategoricalCrossentropy(**kwargs),
+        "categorical_crossentropy": lambda: keras.losses.CategoricalCrossentropy(
+            **kwargs
+        ),
         "softmax_with_crossentropy": lambda: tf.nn.softmax_cross_entropy_with_logits,
     }
 
@@ -102,6 +104,7 @@ def choose_loss(choice: str, **kwargs) -> keras.losses.Loss:
 
 def prune_model(model, nsteps: int, pruning_rate: float = 0.5):
     """Prunes the weights of a model with a given pruning rate."""
+
     def prune_function(layer):
         pruning_params = {
             "pruning_schedule": sparsity.PolynomialDecay(

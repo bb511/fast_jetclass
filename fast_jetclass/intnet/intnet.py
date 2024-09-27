@@ -20,13 +20,13 @@ class NodeEdgeProjection(KL.Layer):
         node_to_edge: Whether the projection happens from nodes to edges (True) or
             the edge matrix gets projected into the nodes (False).
     """
+
     def __init__(self, receiving: bool = True, node_to_edge: bool = True, **kwargs):
         super().__init__(**kwargs)
         self._receiving = receiving
         self._node_to_edge = node_to_edge
 
     def build(self, input_shape: tuple):
-
         if self._node_to_edge:
             self._n_nodes = input_shape[-2]
             self._n_edges = self._n_nodes * (self._n_nodes - 1)
@@ -100,6 +100,7 @@ class IntNet(keras.Model):
         output_dim: The output dimension of the network. For a supervised task, this is
             equal to the number of classes, which in our case is 5.
     """
+
     def __init__(
         self,
         input_size: tuple,
@@ -108,11 +109,11 @@ class IntNet(keras.Model):
         classifier_layers: list = [32, 32],
         output_dim: int = 5,
         activ: str = "relu",
-        aggreg: str =  "mean"
+        aggreg: str = "mean",
     ):
         super(IntNet, self).__init__(name="InteractionNetwork")
         self.input_size = input_size
-        self.number_edges = input_size[1]*(input_size[1] - 1)
+        self.number_edges = input_size[1] * (input_size[1] - 1)
         self.effects_layers = effects_layers
         self.objects_layers = objects_layers
         self.classifier_layers = classifier_layers
@@ -139,7 +140,7 @@ class IntNet(keras.Model):
         self.output_layer = KL.Dense(self.output_dim, name="OutputLayer")
 
     def _build_effects_net(self):
-        input_shape = [self.input_size[1], self.input_size[-1]*2]
+        input_shape = [self.input_size[1], self.input_size[-1] * 2]
         self.effects = keras.Sequential(name="EffectsNetwork")
 
         for layer in self.effects_layers:
@@ -151,7 +152,10 @@ class IntNet(keras.Model):
             self.flops["activation"] += flops.get_flops_activ(input_shape, self.activ)
 
     def _build_objects_net(self):
-        input_shape = [self.input_size[1], self.input_size[-1] + self.effects_layers[-1]]
+        input_shape = [
+            self.input_size[1],
+            self.input_size[-1] + self.effects_layers[-1],
+        ]
         self.objects = keras.Sequential(name="ObjectsNetwork")
 
         for layer in self.objects_layers:
@@ -177,7 +181,7 @@ class IntNet(keras.Model):
     def _get_mean_aggregator(self):
         """Get mean aggregator object and calculate number of flops."""
         # Sum number of inputs into the aggregator + 1 division times number of feats.
-        self.flops["bottleneck"] = (self.objects_layers[-1] + 1)*self.input_size[-1]
+        self.flops["bottleneck"] = (self.objects_layers[-1] + 1) * self.input_size[-1]
 
         return tf.reduce_mean
 

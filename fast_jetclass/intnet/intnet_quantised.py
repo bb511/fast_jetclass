@@ -19,13 +19,13 @@ class NodeEdgeProjection(KL.Layer):
         node_to_edge: Whether the projection happens from nodes to edges (True) or
             the edge matrix gets projected into the nodes (False).
     """
+
     def __init__(self, receiving: bool = True, node_to_edge: bool = True, **kwargs):
         super().__init__(**kwargs)
         self._receiving = receiving
         self._node_to_edge = node_to_edge
 
     def build(self, input_shape: tuple):
-
         if self._node_to_edge:
             self._n_nodes = input_shape[-2]
             self._n_edges = self._n_nodes * (self._n_nodes - 1)
@@ -100,6 +100,7 @@ class IntNetQuantised(keras.Model):
             equal to the number of classes, which in our case is 5.
         nbits: Number of bits that the model is quantised to.
     """
+
     def __init__(
         self,
         input_size: tuple,
@@ -108,12 +109,12 @@ class IntNetQuantised(keras.Model):
         classifier_layers: list = [32, 32],
         output_dim: int = 5,
         activ: str = "relu",
-        aggreg: str =  "mean",
+        aggreg: str = "mean",
         nbits: int = 8,
     ):
         super(IntNetQuantised, self).__init__(name="InteractionNetworkQuantised")
         self.input_size = input_size
-        self.number_edges = input_size[1]*(input_size[1] - 1)
+        self.number_edges = input_size[1] * (input_size[1] - 1)
         self.effects_layers = effects_layers
         self.objects_layers = objects_layers
         self.classifier_layers = classifier_layers
@@ -142,7 +143,7 @@ class IntNetQuantised(keras.Model):
         self.output_layer = KL.Dense(self.output_dim, name="OutputLayer")
 
     def _build_effects_net(self):
-        input_shape = [self.input_size[1], self.input_size[-1]*2]
+        input_shape = [self.input_size[1], self.input_size[-1] * 2]
         self.effects = keras.Sequential(name="EffectsNetwork")
 
         for layer in self.effects_layers:
@@ -151,13 +152,16 @@ class IntNetQuantised(keras.Model):
                     layer,
                     kernel_size=1,
                     kernel_quantizer=self.quant,
-                    bias_quantizer=self.quant
+                    bias_quantizer=self.quant,
                 )
             )
             self.effects.add(qkeras.QActivation(self.activ))
 
     def _build_objects_net(self):
-        input_shape = [self.input_size[1], self.input_size[-1] + self.effects_layers[-1]]
+        input_shape = [
+            self.input_size[1],
+            self.input_size[-1] + self.effects_layers[-1],
+        ]
         self.objects = keras.Sequential(name="ObjectsNetwork")
 
         for layer in self.objects_layers:
@@ -166,7 +170,7 @@ class IntNetQuantised(keras.Model):
                     layer,
                     kernel_size=1,
                     kernel_quantizer=self.quant,
-                    bias_quantizer=self.quant
+                    bias_quantizer=self.quant,
                 )
             )
             self.objects.add(qkeras.QActivation(self.activ))
@@ -199,9 +203,7 @@ class IntNetQuantised(keras.Model):
         for layer in self.classifier_layers:
             self.classifier.add(
                 qkeras.QDense(
-                    layer,
-                    kernel_quantizer=self.quant,
-                    bias_quantizer=self.quant
+                    layer, kernel_quantizer=self.quant, bias_quantizer=self.quant
                 )
             )
             self.classifier.add(qkeras.QActivation(self.activ))

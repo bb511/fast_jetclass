@@ -23,6 +23,7 @@ class DeepSetsInvQuantised(keras.Model):
             equal to the number of classes.
         nbits: Number of bits to quantise the weights of the model to.
     """
+
     def __init__(
         self,
         input_size: tuple,
@@ -30,8 +31,8 @@ class DeepSetsInvQuantised(keras.Model):
         rho_layers: list = [16],
         output_dim: int = 5,
         activ: str = "relu",
-        aggreg: str =  "mean",
-        nbits: int = 8
+        aggreg: str = "mean",
+        nbits: int = 8,
     ):
         super(DeepSetsInvQuantised, self).__init__(name="InvariantDeepsetsQuantised")
         self.input_size = input_size
@@ -50,9 +51,11 @@ class DeepSetsInvQuantised(keras.Model):
     def _build_phi(self):
         self.phi = keras.Sequential(name="PhiNetwork")
         for layer in self.phi_layers:
-            self.phi.add(qkeras.QDense(
-                layer, kernel_quantizer=self.quant, bias_quantizer=self.quant
-            ))
+            self.phi.add(
+                qkeras.QDense(
+                    layer, kernel_quantizer=self.quant, bias_quantizer=self.quant
+                )
+            )
             self.phi.add(qkeras.QActivation(self.activ))
 
     def _build_agg(self):
@@ -71,9 +74,11 @@ class DeepSetsInvQuantised(keras.Model):
         input_shape = self.phi_layers[-1]
         self.rho = keras.Sequential(name="RhoNetwork")
         for layer in self.rho_layers:
-            self.rho.add(qkeras.QDense(
-                layer, kernel_quantizer=self.quant, bias_quantizer=self.quant
-            ))
+            self.rho.add(
+                qkeras.QDense(
+                    layer, kernel_quantizer=self.quant, bias_quantizer=self.quant
+                )
+            )
             self.rho.add(qkeras.QActivation(self.activ))
 
     def call(self, inputs: np.ndarray, **kwargs):

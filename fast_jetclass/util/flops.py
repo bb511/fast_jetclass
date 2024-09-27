@@ -12,7 +12,7 @@ def get_flops_dense(input_shape: list | int, units: int) -> int:
     if isinstance(input_shape, list):
         MAC = functools.reduce(lambda x, y: x * y, input_shape) * units
     else:
-        MAC = input_shape*units
+        MAC = input_shape * units
 
     # Add biases.
     ADD = units
@@ -23,9 +23,9 @@ def get_flops_dense(input_shape: list | int, units: int) -> int:
 def get_flops_conv1d(input_shape: list | int, units: int, kernel_size: int = 1) -> int:
     """Calculate the number of floating point operations in a dense layer."""
     if isinstance(input_shape, list):
-        MAC = kernel_size*functools.reduce(lambda x, y: x * y, input_shape) * units
+        MAC = kernel_size * functools.reduce(lambda x, y: x * y, input_shape) * units
     else:
-        MAC = input_shape*units
+        MAC = input_shape * units
 
     # Add biases.
     ADD = units

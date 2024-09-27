@@ -43,7 +43,7 @@ def main(args, synth_config: dict):
     model = import_model(args.model_dir, hyperparams)
 
     print(tcols.OKGREEN + "\nCONFIGURING SYNTHESIS\n" + tcols.ENDC)
-    hls4ml_config = hls4ml.utils.config_from_keras_model(model, granularity='name')
+    hls4ml_config = hls4ml.utils.config_from_keras_model(model, granularity="name")
     deep_dict_update(hls4ml_config, synth_config)
 
     model_activations = get_model_activations(model)
@@ -62,7 +62,7 @@ def main(args, synth_config: dict):
     print(json.dumps(hls4ml_config, indent=4, sort_keys=True))
     hls_model = hls4ml.converters.convert_from_keras_model(
         model,
-        project_name='mlp_synthesis',
+        project_name="mlp_synthesis",
         hls_config=hls4ml_config,
         output_dir=synthesis_dir,
         part="xcvu13p-flga2577-2-e",
@@ -90,7 +90,7 @@ def main(args, synth_config: dict):
 def import_model(model_dir: str, hyperparams: dict):
     """Imports the model from a specified path. Model is saved in tf format."""
     print(tcols.HEADER + "\n\nMLP hyperparams and architecture: " + tcols.ENDC)
-    print(json.dumps(hyperparams['model_hyperparams'], indent=4, sort_keys=True))
+    print(json.dumps(hyperparams["model_hyperparams"], indent=4, sort_keys=True))
     model = keras.models.load_model(
         model_dir,
         compile=False,
@@ -128,7 +128,9 @@ def run_inference(model: keras.Model, data: HLS4MLData150):
     return y_pred
 
 
-def profile_model(model: keras.Model, hls_model: hls4ml.model, data: np.ndarray, outdir):
+def profile_model(
+    model: keras.Model, hls_model: hls4ml.model, data: np.ndarray, outdir
+):
     """Profile the hls4ml model to see the bit width of every layer.
 
     The plots in this function show the distribution of weights in the network.
@@ -198,6 +200,7 @@ def get_model_activations(model: keras.Model):
             model_activations.append(layer.name)
 
     return model_activations
+
 
 def deep_dict_update(d, u):
     """Updates a deep dictionary on its deepsets entries."""

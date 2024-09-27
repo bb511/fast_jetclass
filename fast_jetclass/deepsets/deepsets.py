@@ -23,6 +23,7 @@ class DeepSetsInv(keras.Model):
         output_dim: The output dimension of the network. For a supervised task, this is
             equal to the number of classes.
     """
+
     def __init__(
         self,
         input_size: tuple,
@@ -30,7 +31,7 @@ class DeepSetsInv(keras.Model):
         rho_layers: list = [16],
         output_dim: int = 5,
         activ: str = "relu",
-        aggreg: str =  "mean"
+        aggreg: str = "mean",
     ):
         super(DeepSetsInv, self).__init__(name="InvariantDeepsets")
         self.input_size = input_size
@@ -86,7 +87,7 @@ class DeepSetsInv(keras.Model):
     def _get_mean_aggregator(self):
         """Get mean aggregator object and calculate number of flops."""
         # Sum number of inputs into the aggregator + 1 division times number of feats.
-        self.flops["bottleneck"] = (self.phi_layers[-1] + 1)*self.input_size[-1]
+        self.flops["bottleneck"] = (self.phi_layers[-1] + 1) * self.input_size[-1]
 
         return tf.reduce_mean
 

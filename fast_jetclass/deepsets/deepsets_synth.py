@@ -15,9 +15,9 @@ def deepsets_invariant_synth(
     rho_layers: list = [16],
     output_dim: int = 5,
     activ: str = "relu",
-    aggreg: str =  "mean",
+    aggreg: str = "mean",
     aggreg_precision: dict = {"bits": 20, "integer": 10},
-    nbits: int = 8
+    nbits: int = 8,
 ):
     """Deep sets permutation invariant graph network https://arxiv.org/abs/1703.06114.
 
@@ -42,19 +42,19 @@ def deepsets_invariant_synth(
 
     # Phi network.
     x = qkeras.QDense(
-            phi_layers[0], kernel_quantizer=quant, bias_quantizer=quant, name=f"phi{1}"
-        )(deepsets_input)
+        phi_layers[0], kernel_quantizer=quant, bias_quantizer=quant, name=f"phi{1}"
+    )(deepsets_input)
     x = qkeras.QActivation(activ)(x)
     for i, layer in enumerate(phi_layers[1:]):
         x = qkeras.QDense(
-                layer, kernel_quantizer=quant, bias_quantizer=quant, name=f"phi{i+2}"
-            )(x)
+            layer, kernel_quantizer=quant, bias_quantizer=quant, name=f"phi{i+2}"
+        )(x)
         x = qkeras.QActivation(activ)(x)
 
     # Trick to change the precision of the input to the aggregator.
     x = qkeras.QActivation(
-            qkeras.quantized_bits(**aggreg_precision, symmetric=0, keep_negative=1)
-        )(x)
+        qkeras.quantized_bits(**aggreg_precision, symmetric=0, keep_negative=1)
+    )(x)
 
     # Aggregator
     agg = choose_aggregator(aggreg)
@@ -63,8 +63,8 @@ def deepsets_invariant_synth(
     # Rho network.
     for i, layer in enumerate(rho_layers):
         x = qkeras.QDense(
-                layer, kernel_quantizer=quant, bias_quantizer=quant, name=f"rho{i+1}"
-            )(x)
+            layer, kernel_quantizer=quant, bias_quantizer=quant, name=f"rho{i+1}"
+        )(x)
         x = qkeras.QActivation(activ)(x)
 
     deepsets_output = KL.Dense(output_dim)(x)

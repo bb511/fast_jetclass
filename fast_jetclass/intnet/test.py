@@ -34,9 +34,16 @@ def main(args):
     valid_data = util.import_data(hyperparams["data_hyperparams"], train=False)
     valid_data.shuffle_constituents(args.seed)
 
-    util.nice_print_dictionary("Testing model w/ hps:", hyperparams["model_hyperparams"])
+    util.nice_print_dictionary(
+        "Testing model w/ hps:", hyperparams["model_hyperparams"]
+    )
     kfold_metrics = {
-        "tprs": [], "fprs": [], "aucs": [], "fats": [], "accs": [], "loss": []
+        "tprs": [],
+        "fprs": [],
+        "aucs": [],
+        "fats": [],
+        "accs": [],
+        "loss": [],
     }
     for idx, model_dir in enumerate(model_dirs):
         print(f"Testing model from kfold configuration {idx}")

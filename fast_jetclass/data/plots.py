@@ -101,9 +101,7 @@ def normalised_data(
         )
         plt.close()
 
-    print(
-        tcols.OKGREEN + "Plots saved to: " + tcols.ENDC, outdir, "\U0001f4ca"
-    )
+    print(tcols.OKGREEN + "Plots saved to: " + tcols.ENDC, outdir, "\U0001f4ca")
 
 
 def constituent_number(outdir: str, x_data: np.ndarray, train_or_val: str):
@@ -140,9 +138,7 @@ def constituent_number(outdir: str, x_data: np.ndarray, train_or_val: str):
     plt.savefig(os.path.join(outdir, f"constituents_plot_{train_or_val}.pdf"))
     plt.close()
 
-    print(
-        tcols.OKGREEN + "Plots saved to: " + tcols.ENDC, outdir, "\U0001f4ca"
-    )
+    print(tcols.OKGREEN + "Plots saved to: " + tcols.ENDC, outdir, "\U0001f4ca")
 
 
 def segregate_data(x_data: np.array, y_data: np.array):
