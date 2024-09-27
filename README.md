@@ -3,4 +3,6 @@
 
 # Ultrafast Jet Classification using Geometric Learning for the HL-LHC
 
+Code repository corresponding to the [Ultrafast Jet Classification at the HL-LHC](https://arxiv.org/abs/2402.01876) paper.
 
+## Dependencies
