@@ -17,6 +17,17 @@ conda env create -f fast_jetclass.yml
 ```
 Alternatively, one can install the following packages manually:
 ```
+  - python=3.10
+  - pyyaml
+  - numpy
+  - python-wget
+  - scikit-learn
+  - matplotlib
+  - pydot
+  - pydotplus
+  - tensorflow==2.14
+  - qkeras==0.9
+  - tensorflow-model-optimization==0.8.0
 ```
 
 Then, after installing the dependencies, install this repository using
@@ -25,39 +36,23 @@ pip install .
 ```
 while still in this repository's directory.
 
-### Additional dependencies for synthesis
-The synthesis of the models for the FPGA are done using `hls4ml` 
+### Additional Dependencies for Synthesis
+The synthesis of the models for the FPGA are done using `hls4ml`.
+Hence, a particular version of this package is needed for running `*_synth` part of the scripts.
+To install this, execute `pip install .` inside the `hls4ml` directory of this repository.
+Additionally, for the profiling of the synthesized models, one also needs a subpackage of `hls4ml`, installed with
+```
+pip install hls4ml[profiling]
+conda install pydot
+conda install pydotplus
+```
+I honestly have not found a way of making the profiling package work without `conda`.
 
-### GLIBCxx library errorA
-In case you get an error that your machine does not have the right `GLIBCxx` library, i.e., something like the following
-```
-ImportError: /lib64/libstdc++.so.6: version `GLIBCXX_3.4.29' not found
-```
-then configure the `LD_LIBRARY_PATH` to point to the conda `lib` of the `conda` environment, if you used `conda`.
-To do this quickly, run the following command in your terminal:
-```
-export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/data/deodagiu/miniconda/envs/fast_jetclass/lib/
-```
+If you do not need profiling, omit the `--diagnose` flag when running the `*_synth` scripts.
+The profiling subpackage is a bit buggy, so if you encounter an error, contact the authors of this package; in the current version there are a couple of issues that are fixed by going into the source code of the profiling and changing a few lines.
+Contact me at the email address above if you need help with this.
 
-To do this gracefully, open or create the following file
-```
-[your_conda_dir]/envs/fast_jetclass/etc/conda/activate.d/env_vars.sh
-```
-and paste the following inside
-```
-#!/bin/sh
-
-export OLD_LD_LIBRARY_PATH=$LD_LIBRARY_PATH
-export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/data/deodagiu/miniconda/envs/fast_jetclass/lib/
-```
-This will modify your `LD_LIBRARY_PATH` only when inside the conda environment. To restore this path to its original form, open or create the following file
-```
-[your_conda_dir]/envs/fast_jetclass/etc/conda/deactivate.d/env_vars.sh
-```
-and paste the following inside
-```
-#!/bin/sh
-
-export LD_LIBRARY_PATH=$OLD_LD_LIBRARY_PATH
-```
+## Running the Scripts
+Examples of running the scripts, from training to synthesis, are given for each model in the README of the scripts directory in this repository.
+All the experiments executed for the corresponding paper of this code have their configuration in the `scripts/configs` folder.
 
